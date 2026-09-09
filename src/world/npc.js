@@ -97,14 +97,18 @@ export class Npc {
   }
 
   async interact() {
+    if (this.talking) return;
     this.talking = true;
     const dir = dirTowards(this.x, this.y, S.player.x, S.player.y);
     if (dir) this.face(dir);
     Audio.sfx('confirm');
     try {
-      const lines = linesFor(this);
-      for (const l of lines) await UIx.say(l.text, { speaker: l.speaker ?? nameOf(this.who) });
-      await afterTalk(this);
+      if (!await importantTalk(this)) {
+        const lines = linesFor(this);
+        for (const l of lines) await UIx.say(l.text, { speaker: l.speaker ?? nameOf(this.who) });
+        if (this.who === 'peddler') await visitCobb();
+      }
+      try { Hooks.missions.note('talk', { who: this.who }); } catch {}
     } finally {
       this.talking = false;
     }
@@ -118,6 +122,115 @@ export const NAMES = {
   rival: 'Ash-of-the-North',
 };
 export const nameOf = who => NAMES[who] || 'Villager';
+
+const STARTER_CHOICES = [
+  { id: 'embercub', label: 'Embercub', detail: 'A brave little warmth.' },
+  { id: 'leafowl', label: 'Leafowl', detail: 'A quiet, watchful friend.' },
+  { id: 'aquarabbit', label: 'Aquarabbit', detail: 'A bright, curious spirit.' },
+];
+
+// Story flags live in the existing save's extensible flags map. Older saves get
+// one meaningful reunion without replaying gifts or changing their progress.
+async function importantTalk(npc) {
+  const speaker = nameOf(npc.who);
+  if (npc.who === 'gran') {
+    const hasGuardian = S.party.length > 0 || S.box.length > 0;
+    if (!flag('gotStarter') && hasGuardian) { setFlag('gotStarter'); save(); }
+    if (!flag('gotStarter')) {
+      let welcome = null;
+      const result = await UIx.story({
+        title: 'A place beside the fire', speaker, portrait: 'gran', setting: 'cottage',
+        lines: [
+          'There you are. I kept the kettle warm. Some things are worth waiting for.',
+          'These three have been watching the door all morning. Guardians are neighbours, mind. Not pets.',
+          'The road feels different when someone walks it with you. Whose company feels like home?',
+        ],
+        choices: STARTER_CHOICES,
+        async onChoose(index) {
+          if (welcome) return welcome;
+          const chosen = STARTER_CHOICES[index];
+          if (!chosen || flag('gotStarter')) return { lines: ['Take your time, dear. There is no hurry.'] };
+          const guardian = Hooks.battle.grantStarter(chosen.id);
+          if (!guardian) return { lines: ['Rest here a moment. We will try again when you are ready.'] };
+          setFlag('gotStarter');
+          save();
+          welcome = {
+            guardian: chosen.id,
+            lines: [
+              `${chosen.label} settles beside you. There now. You have found each other.`,
+              'Look after one another out there. And remember: this hearth will always have room for you both.',
+            ],
+          };
+          return welcome;
+        },
+      });
+      if (result?.completed && flag('gotStarter')) { setFlag('story.granHearth'); save(); }
+      return true;
+    }
+    if (!flag('story.granHearth')) {
+      await finishStory('story.granHearth', {
+        title: 'Room for you both', speaker, portrait: 'gran', setting: 'cottage',
+        lines: [
+          'I know those footsteps. Come warm yourself a moment.',
+          'When you first left, I worried about the road. Now I see you bringing a little warmth back with you.',
+          'A hearth is only a fire until someone sits at it. I am glad you came home.',
+        ],
+      });
+      return true;
+    }
+  }
+  if (npc.who === 'mayor') {
+    if (!flag('story.mayorWelcome')) {
+      await finishStory('story.mayorWelcome', {
+        title: 'A village worth coming home to', speaker, portrait: 'mayor', setting: 'village',
+        lines: flag('metMayor') ? [
+          'I used to walk this plaza counting the empty windows.',
+          'Lately I catch myself wondering who might live behind them. You helped me remember how to do that.',
+          'Every small thing you build gives someone another reason to come home.',
+        ] : [
+          'You must be the one Gran wrote about. Welcome to Emberhollow.',
+          'Some evenings I keep the plaza lamps lit, even when there is no one left outside. A village should look like it is waiting for you.',
+          'Stand beside the Hearthstone when you can. Help us give people a reason to come home.',
+        ],
+      }, 'metMayor');
+      return true;
+    }
+    if (Hooks.village.level() >= 4 && !flag('story.mayorRenewal')) {
+      await finishStory('story.mayorRenewal', {
+        title: 'The windows are warm again', speaker, portrait: 'mayor', setting: 'village',
+        lines: [
+          'There was laughter in the plaza this morning. I stopped to listen. Could not help myself.',
+          'People are moving back. Whole families. The windows I used to count are lighting up again.',
+          'You gave this place more than buildings. You gave us something to look forward to. Thank you.',
+        ],
+      });
+      return true;
+    }
+  }
+  if (npc.who === 'rival' && !flag('metRival')) {
+    await finishStory('story.rivalMeeting', {
+      title: 'Someone worth staying for', speaker, portrait: 'rival', setting: 'forest',
+      lines: [
+        'So you are the one taking the long way round.',
+        'I came south to see whether Emberhollow was worth saving. Empty houses are easy to leave behind.',
+        S.party.length
+          ? 'But your Guardian keeps looking back to see if you are coming. Perhaps I have been looking at the wrong things.'
+          : 'Yet you walked all this way, and you still mean to go back. Perhaps I have been looking at the wrong things.',
+        'Show me something worth staying for. I will be watching.',
+      ],
+    }, 'metRival');
+    return true;
+  }
+  return false;
+}
+
+async function finishStory(storyFlag, options, progressFlag) {
+  const result = await UIx.story(options);
+  if (!result?.completed) return;
+  if (progressFlag && !flag(progressFlag)) setFlag(progressFlag);
+  setFlag(storyFlag);
+  save();
+}
 
 // Dialogue reacts to village level and story flags so the world notices your progress.
 function linesFor(npc) {
@@ -190,30 +303,6 @@ function linesFor(npc) {
       return [T('Still building. Good. I will keep watching.')];
     default: return [T('Lovely day for it.')];
   }
-}
-
-async function afterTalk(npc) {
-  if (npc.who === 'mayor' && !flag('metMayor')) setFlag('metMayor');
-  if (npc.who === 'rival' && !flag('metRival')) setFlag('metRival');
-  if (npc.who === 'gran' && !flag('gotStarter')) {
-    const choices = [
-      { id: 'embercub', name: 'Embercub' },
-      { id: 'leafowl', name: 'Leafowl' },
-      { id: 'aquarabbit', name: 'Aquarabbit' },
-    ];
-    const pick = await UIx.ask('Who will walk beside you?', choices.map(o => o.name), { speaker: 'Gran Willow' });
-    const chosen = choices[pick];
-    if (chosen) {
-      const guardian = Hooks.battle.grantStarter(chosen.id);
-      if (guardian) {
-        setFlag('gotStarter');
-        save();
-        await UIx.say(`${chosen.name} pads over and settles beside you.`, { speaker: 'Gran Willow' });
-      }
-    }
-  }
-  if (npc.who === 'peddler') await visitCobb();
-  try { Hooks.missions.note('talk', { who: npc.who }); } catch {}
 }
 
 // Cobb offers the same supplies and prices as the village market, so an early

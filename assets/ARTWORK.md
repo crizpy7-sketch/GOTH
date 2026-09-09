@@ -1,5 +1,33 @@
 # Artwork provenance
 
+## Important conversations (v4)
+
+Generated on 2026-09-09 using the built-in `image_gen` tool in text-to-image mode,
+without reference images. Original transparent PNG portraits are preserved as
+`gran-willow.png`, `mayor-bramble.png`, and `ash-north.png`; their WebP copies are
+336×384 and render at 112×128 logical pixels. The source `hearth-conversation.png`
+is optimized to a 640×360 WebP backdrop. `scripts/prepare-story-art.mjs` performs
+only trimming, resizing, and WebP encoding, preserving portrait alpha. The village
+story scene reuses the existing hearth-valley artwork; the rival scene reuses the
+forest clearing. Exact generation prompts follow.
+
+### gran-willow
+
+> Use case: stylized-concept. Production portrait sprite for Guardians of the Hearth, an original cozy pixel fantasy RPG. ONE waist-up elderly grandmother, Gran Willow, isolated on a genuinely TRANSPARENT alpha background. Warm fair skin with smile lines and wrinkles, kind brown eyes, silver-white hair swept into a neat bun, lavender dress, pale lilac knitted shawl with a tiny rose clasp. Gentle wise welcoming smile, relaxed shoulders, hands lightly holding a simple earthenware teacup at waist height. Three-quarter view looking toward screen right, facing an unseen young adventurer. Entire hair bun, head, shoulders, elbows and cup fully contained; flat waist crop at the bottom. Portrait occupies central85 percent of tall4:5 frame. Rich handcrafted premium32-bit RPG pixel art, deliberate crisp square pixel clusters and detailed fabric/facial planes, soft golden fireside light from upper right, plum shadows. Expressive believable mature face, cozy storybook character design. NO scenery, no furniture, no text, no labels, no border, no panel, no frame, no watermark. Not vector, not3D, not photoreal. Readable at about112x128 logical pixels.
+
+### mayor-bramble
+
+> Use case: stylized-concept. Production portrait sprite for Guardians of the Hearth, an original cozy pixel fantasy RPG. ONE waist-up elderly village mayor, Mayor Bramble, isolated on genuinely TRANSPARENT alpha background. Warm fair skin, rounded kind face with age lines and expressive hazel eyes, balding with soft gray hair around sides, a modest tall forest-green village hat with a narrow gold ribbon. Deep leaf-green coat over a mustard-gold waistcoat and cream shirt, simple brown leather belt. Welcoming yet slightly worried expression, one hand resting over his waistcoat. Three-quarter view looking screen right, toward an unseen visitor. Entire hat, shoulders and elbows contained with clear padding; waist crop at bottom. Portrait occupies central85 percent of tall4:5 frame. Rich handcrafted premium32-bit RPG pixel art, deliberate crisp square pixel clusters, warm top-right late-afternoon sunlight, deep olive-brown shadows, detailed woven clothes and expressive believable mature face. Cozy woodland village elder. NO scenery, furniture, text, labels, border, panel, frame or watermark. Not vector, not3D, not photoreal. Readable at112x128 logicalpixels. Match lavender-dressed silver-haired grandma portrait craftsmanship.
+
+### ash-north
+
+> Use case: stylized-concept. Production portrait sprite for Guardians of the Hearth, original cozy pixel fantasy RPG. ONE waist-up young adult traveler called Ash-of-the-North, isolated on genuinely TRANSPARENT alpha background. Fair skin, short swept silver-white hair with pale ice-blue shadows, thoughtful slate-blue eyes, determined skeptical but approachable expression. Weathered navy-blue tunic, blue travel cloak draped over shoulders, soft ivory high collar, simple plain clasp and brown leather strap. NO hat, no weapon. Three-quarter view looking screen right toward an unseen village adventurer, one hand lightly touching cloak clasp. Entire swept hair, head, shoulders, elbows contained with transparent padding; flat waist crop at bottom. Portrait fills central85 percent of tall4:5 frame. Premium handcrafted32-bit RPG pixel art with crisp square pixel clusters, rich woven fabric and expressive face, cool daylight with warm golden right rimlight and deep indigo shadows. Original storybook northern traveler. NO scenery, text, label, panel, border, watermark. Not vector, not3D, not photoreal. Readable at112x128 logicalpixels, same detailed character sprite craftsmanship as kindly silver-haired grandmother in lavender and green-coated village mayor.
+
+### hearth-conversation
+
+> Use case: stylized-concept. Finished environment artwork for an important character conversation scene in an original cozy fantasy pixel RPG, Guardians of the Hearth. Wide cinematic16:9 view across Gran Willow's warm welcoming cottage at seated eye level. Lush handcrafted premium32-bit RPG pixel art, crisp square clustered details and warm painterly depth. In the background on the RIGHT HALF, a glowing stone hearth with a copper kettle, stacks of split logs, shelves of earthenware cups and herbs, oak beams, small window with soft golden afternoon light and glimpses of green garden. Center midground a small round wooden tea table with three tiny folded blankets for young animal companions. LEFT THIRD is quieter muted amber wood and soft lit wall, kept open and low detail for an overlaid character portrait. Lower third dark warm wood and gentle shadow suitable for a dialogue overlay; important scenic elements above bottom third. Intimate, safe, emotionally warm, beautiful light, visual depth, no harsh bloom. NO people, NO creatures, NO lettering, NO text, NO UI, NO border, NO collage, NO watermark. Camera eye-level story scene, not a top-down map, not3D. Exactly one coherent full-bleed16:9 background.
+
+
 Generated on 2026-09-09 with the built-in `image_gen` tool. PNG originals are preserved in this directory. Optimized WebP copies are consumed by the build and embedded into `index.html`; the game never depends on an external image URL.
 
 The optional `scripts/prepare-world-art.mjs` and `scripts/prepare-guardian-art.mjs`

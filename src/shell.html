@@ -150,17 +150,17 @@
   }
   body.touch[data-touch-mode="dialogue"][data-dialogue-choices="no"] #touch .pad { display:none; }
 
-  /* Menus use four deliberate direction keys. Their short dock leaves item rows
-     readable and keeps accidental stick travel from skipping a choice. */
-  body.touch[data-touch-mode="menu"] #touch::before {
+  /* Menus and important conversations use deliberate direction keys. This 46px
+     dock keeps their text and choices clear of movement controls. */
+  body.touch:is([data-touch-mode="menu"],[data-touch-mode="story"]) #touch::before {
     content:''; position:absolute; bottom:0; left:0; right:0; height:46px;
     background:linear-gradient(0deg,#0e211d,#19342b);
     border-top:1px solid rgba(221,208,158,.28);
   }
-  body.touch[data-touch-mode="menu"] #touch .pad,
-  body.touch[data-touch-mode="menu"] #touch .btn.m,
-  body.touch[data-touch-mode="menu"] #touch .btn.f { display:none; }
-  body.touch[data-touch-mode="menu"] #touch .menu-directions {
+  body.touch:is([data-touch-mode="menu"],[data-touch-mode="story"]) #touch .pad,
+  body.touch:is([data-touch-mode="menu"],[data-touch-mode="story"]) #touch .btn.m,
+  body.touch:is([data-touch-mode="menu"],[data-touch-mode="story"]) #touch .btn.f { display:none; }
+  body.touch:is([data-touch-mode="menu"],[data-touch-mode="story"]) #touch .menu-directions {
     position:absolute; display:flex; left:6px; bottom:1px; gap:4px; pointer-events:auto;
   }
   .menu-directions button {
@@ -168,13 +168,20 @@
     background:rgba(103,128,91,.15); color:#eee5c4; font:20px system-ui,sans-serif; touch-action:none;
   }
   .menu-directions button.on { background:#58704b; }
-  body.touch[data-touch-mode="menu"] #touch .btn.a,
-  body.touch[data-touch-mode="menu"] #touch .btn.b {
+  body.touch:is([data-touch-mode="menu"],[data-touch-mode="story"]) #touch .btn.a,
+  body.touch:is([data-touch-mode="menu"],[data-touch-mode="story"]) #touch .btn.b {
     top:auto; bottom:1px; width:54px; height:44px; min-height:44px; border-radius:6px;
     transform:none; background:rgba(103,128,91,.15);
   }
-  body.touch[data-touch-mode="menu"] #touch .btn.a { right:64px; }
-  body.touch[data-touch-mode="menu"] #touch .btn.b { right:6px; }
+  body.touch:is([data-touch-mode="menu"],[data-touch-mode="story"]) #touch .btn.a { right:64px; }
+  body.touch:is([data-touch-mode="menu"],[data-touch-mode="story"]) #touch .btn.b { right:6px; }
+  body.touch[data-touch-mode="story"][data-story-choices="no"] #touch .menu-directions { display:none; }
+  body.touch[data-touch-mode="story"][data-story-choices="no"] #touch .btn.b { display:none; }
+  body.touch[data-touch-mode="story"][data-story-choices="no"] #touch .btn.a { right:6px; width:92px; }
+  body.touch[data-touch-mode="story"] #touch .btn { font-size:12px; letter-spacing:0; }
+  body.touch[data-touch-mode="story"] #touch .btn.a { color:#172d26; background:#e4cc91; border-color:#f5e2b1; }
+  body.touch[data-touch-mode="story"] #touch .btn.a.on { background:#fff0c4; }
+  body.touch[data-touch-mode="story"] #touch .btn:disabled { opacity:.4; }
 
   /* ---- intentional portrait experience for the 16:9 game ---- */
   #rotateGate {

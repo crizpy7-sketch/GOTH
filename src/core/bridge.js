@@ -15,6 +15,17 @@ export const UIx = {
   /** Typewriter dialogue box. Resolves when the player has read it through. */
   async say(text, opts) { console.info('[say]', text); },
   async sayMany(lines, opts) { for (const l of lines) await this.say(l, opts); },
+  /** Important story moment; the ordinary dialogue UI remains a safe fallback. */
+  async story(opts = {}) {
+    const speech = { speaker: opts.speaker };
+    for (const line of opts.lines || []) await this.say(line, speech);
+    if (!opts.choices?.length) return { completed: true, choice: -1 };
+    const choice = await this.ask(opts.prompt || 'Who will walk beside you?', opts.choices.map(c => c.label), speech);
+    if (choice < 0 || choice >= opts.choices.length) return { completed: false, choice: -1 };
+    const ending = await opts.onChoose?.(choice);
+    for (const line of ending?.lines || []) await this.say(line, speech);
+    return { completed: true, choice };
+  },
   /** Returns the chosen index, or -1 if cancelled. */
   async ask(text, choices, opts) { return 0; },
   async confirm(text) { return true; },

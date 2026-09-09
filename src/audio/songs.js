@@ -18,6 +18,16 @@ const song = (bpm, div, tracks) => ({ bpm, div, tracks });
 const t = (base, notes, extra = {}) => ({ ...base, ...extra, notes });
 
 export function register() {
+  // Spacious, quiet phrases let an important conversation set its own pace.
+  Audio.defineSong('story', song(66, 2, {
+    lead: t(SOFT, `
+      e4 - - . g4 - - .  a4 - - - g4 - - .
+      e4 - - . d4 - - .  c4 - - - - - - .
+      f4 - - . a4 - - .  g4 - - - e4 - - .
+      d4 - - . e4 - - .  c4 - - - - - - .`, { gain: 0.10, legato: 0.82 }),
+    pad: t(SOFT, `c3 - - - - - - . a2 - - - - - - . f3 - - - - - - . g3 - - - - - - .`, { gain: 0.05 }),
+  }));
+
   // ---- title: banked embers, nobody in a hurry ----------------------------------
   Audio.defineSong('title', song(70, 2, {
     lead: t(SOFT, `

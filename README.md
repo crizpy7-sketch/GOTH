@@ -17,6 +17,21 @@ A cozy creature-bonding and village-building RPG. Explore Emberhollow, meet its 
 
 On phones, play in landscape. Translucent controls overlay the playfield edges, move clear of dialogue, and switch to precise arrows in menus. The fullscreen button appears on supported browsers. The title menu supports mouse, touch, keyboard, and controller. Settings include sound, volume, text speed, journey hints, and reduced motion.
 
+## Important conversations v4
+
+Talk to Gran Willow to see the new story presentation. Existing saves receive a
+one-time reunion; new players choose their first companion inside the same scene.
+
+- Important exchanges have large character portraits, illustrated settings, quiet music, and player-paced dialogue.
+- Gran's starter welcome, the Mayor's welcome/reflection and Level 4 milestone, and the first rival meeting use this presentation. Ordinary NPCs, shops, and repeat chats stay quick.
+- Preview Embercub, Leafowl, or Aquarabbit, then confirm a companion. Cancelling gives nothing and lets you return later. A successful choice continues into the welcome without reopening dialogue windows.
+- Keyboard, touch, and gamepad controls support revealing text, advancing pages, and choosing a Guardian. Reduced motion, reading speed, saved progress, and accessibility labels are respected.
+- The scene pauses exploration and restores its music and controls afterward.
+
+Run `npm run test:story` with the preview server running for the dedicated desktop
+and mobile conversation checks. New artwork sources, optimized copies, and exact
+generation prompts are documented in [assets/ARTWORK.md](assets/ARTWORK.md).
+
 ## Bonding and discovery v3
 
 - A dedicated Bond action shows charm stock and the current success chance before an offer. Four woven knots reflect the actual trust beats, with clear welcome and destination feedback.
