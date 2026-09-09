@@ -1,0 +1,481 @@
+[
+  {
+    "id": "ui/menu.js",
+    "deps": {}
+  },
+  {
+    "id": "art/glyphs.js",
+    "deps": {}
+  },
+  {
+    "id": "core/font.js",
+    "deps": {
+      "../art/glyphs.js": "art/glyphs.js"
+    }
+  },
+  {
+    "id": "core/util.js",
+    "deps": {}
+  },
+  {
+    "id": "core/renderer.js",
+    "deps": {
+      "./font.js": "core/font.js",
+      "./util.js": "core/util.js"
+    }
+  },
+  {
+    "id": "core/input.js",
+    "deps": {}
+  },
+  {
+    "id": "core/scene.js",
+    "deps": {}
+  },
+  {
+    "id": "core/loop.js",
+    "deps": {}
+  },
+  {
+    "id": "core/audio.js",
+    "deps": {}
+  },
+  {
+    "id": "art/atlas.js",
+    "deps": {}
+  },
+  {
+    "id": "art/palette.js",
+    "deps": {}
+  },
+  {
+    "id": "core/events.js",
+    "deps": {}
+  },
+  {
+    "id": "state.js",
+    "deps": {
+      "./core/events.js": "core/events.js"
+    }
+  },
+  {
+    "id": "core/rng.js",
+    "deps": {}
+  },
+  {
+    "id": "art/names.js",
+    "deps": {}
+  },
+  {
+    "id": "art/tiles.js",
+    "deps": {
+      "./atlas.js": "art/atlas.js",
+      "./palette.js": "art/palette.js",
+      "./names.js": "art/names.js"
+    }
+  },
+  {
+    "id": "art/sprites.js",
+    "deps": {
+      "./atlas.js": "art/atlas.js",
+      "./palette.js": "art/palette.js",
+      "./names.js": "art/names.js",
+      "./tiles.js": "art/tiles.js"
+    }
+  },
+  {
+    "id": "art/creatures.js",
+    "deps": {
+      "./atlas.js": "art/atlas.js",
+      "./names.js": "art/names.js",
+      "./palette.js": "art/palette.js"
+    }
+  },
+  {
+    "id": "art/effects.js",
+    "deps": {
+      "./atlas.js": "art/atlas.js",
+      "./names.js": "art/names.js",
+      "./palette.js": "art/palette.js"
+    }
+  },
+  {
+    "id": "art/uiart.js",
+    "deps": {
+      "./atlas.js": "art/atlas.js",
+      "./names.js": "art/names.js",
+      "./palette.js": "art/palette.js"
+    }
+  },
+  {
+    "id": "audio/songs.js",
+    "deps": {
+      "../core/audio.js": "core/audio.js"
+    }
+  },
+  {
+    "id": "core/bridge.js",
+    "deps": {}
+  },
+  {
+    "id": "ui/frame.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/scene.js": "core/scene.js",
+      "../core/input.js": "core/input.js",
+      "../core/util.js": "core/util.js",
+      "../core/bridge.js": "core/bridge.js"
+    }
+  },
+  {
+    "id": "ui/textbox.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/input.js": "core/input.js",
+      "../core/scene.js": "core/scene.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../core/audio.js": "core/audio.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../core/font.js": "core/font.js",
+      "../state.js": "state.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/util.js": "core/util.js",
+      "./frame.js": "ui/frame.js"
+    }
+  },
+  {
+    "id": "world/daynight.js",
+    "deps": {
+      "../state.js": "state.js",
+      "../core/events.js": "core/events.js",
+      "../core/renderer.js": "core/renderer.js",
+      "../art/palette.js": "art/palette.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../core/rng.js": "core/rng.js"
+    }
+  },
+  {
+    "id": "ui/hud.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../core/font.js": "core/font.js",
+      "../state.js": "state.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/util.js": "core/util.js",
+      "./frame.js": "ui/frame.js",
+      "../world/daynight.js": "world/daynight.js"
+    }
+  },
+  {
+    "id": "ui/transition.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/scene.js": "core/scene.js",
+      "../core/audio.js": "core/audio.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/util.js": "core/util.js",
+      "../core/rng.js": "core/rng.js"
+    }
+  },
+  {
+    "id": "battle/moves.js",
+    "deps": {}
+  },
+  {
+    "id": "battle/species.js",
+    "deps": {
+      "../art/names.js": "art/names.js",
+      "./moves.js": "battle/moves.js"
+    }
+  },
+  {
+    "id": "ui/party.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/input.js": "core/input.js",
+      "../core/scene.js": "core/scene.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../core/audio.js": "core/audio.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../core/font.js": "core/font.js",
+      "../state.js": "state.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/util.js": "core/util.js",
+      "../art/names.js": "art/names.js",
+      "../battle/species.js": "battle/species.js",
+      "../battle/moves.js": "battle/moves.js"
+    }
+  },
+  {
+    "id": "world/maps.js",
+    "deps": {
+      "../core/rng.js": "core/rng.js"
+    }
+  },
+  {
+    "id": "ui/title.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/input.js": "core/input.js",
+      "../core/scene.js": "core/scene.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../core/audio.js": "core/audio.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../core/font.js": "core/font.js",
+      "../state.js": "state.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/util.js": "core/util.js",
+      "../core/rng.js": "core/rng.js",
+      "../world/maps.js": "world/maps.js"
+    }
+  },
+  {
+    "id": "ui/pause.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/input.js": "core/input.js",
+      "../core/scene.js": "core/scene.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../core/audio.js": "core/audio.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../core/font.js": "core/font.js",
+      "../state.js": "state.js",
+      "../art/palette.js": "art/palette.js",
+      "../world/daynight.js": "world/daynight.js"
+    }
+  },
+  {
+    "id": "world/legend.js",
+    "deps": {}
+  },
+  {
+    "id": "world/map.js",
+    "deps": {
+      "./legend.js": "world/legend.js",
+      "./maps.js": "world/maps.js",
+      "../core/util.js": "core/util.js",
+      "../core/rng.js": "core/rng.js"
+    }
+  },
+  {
+    "id": "world/npc.js",
+    "deps": {
+      "../core/util.js": "core/util.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../core/renderer.js": "core/renderer.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../state.js": "state.js",
+      "../core/rng.js": "core/rng.js",
+      "../core/audio.js": "core/audio.js"
+    }
+  },
+  {
+    "id": "world/overworld.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/input.js": "core/input.js",
+      "../core/scene.js": "core/scene.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/audio.js": "core/audio.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../state.js": "state.js",
+      "../core/events.js": "core/events.js",
+      "../core/util.js": "core/util.js",
+      "../core/rng.js": "core/rng.js",
+      "./map.js": "world/map.js",
+      "./maps.js": "world/maps.js",
+      "./npc.js": "world/npc.js",
+      "./daynight.js": "world/daynight.js"
+    }
+  },
+  {
+    "id": "battle/capture.js",
+    "deps": {
+      "./species.js": "battle/species.js"
+    }
+  },
+  {
+    "id": "battle/engine.js",
+    "deps": {
+      "./moves.js": "battle/moves.js",
+      "./species.js": "battle/species.js",
+      "./capture.js": "battle/capture.js",
+      "../core/rng.js": "core/rng.js"
+    }
+  },
+  {
+    "id": "battle/scene.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/input.js": "core/input.js",
+      "../core/scene.js": "core/scene.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../core/audio.js": "core/audio.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../state.js": "state.js",
+      "../core/events.js": "core/events.js",
+      "../core/font.js": "core/font.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/util.js": "core/util.js",
+      "./engine.js": "battle/engine.js",
+      "./species.js": "battle/species.js",
+      "./moves.js": "battle/moves.js",
+      "./capture.js": "battle/capture.js"
+    }
+  },
+  {
+    "id": "village/economy.js",
+    "deps": {
+      "../state.js": "state.js",
+      "../core/events.js": "core/events.js"
+    }
+  },
+  {
+    "id": "village/buildings.js",
+    "deps": {
+      "../art/names.js": "art/names.js",
+      "../state.js": "state.js",
+      "./economy.js": "village/economy.js"
+    }
+  },
+  {
+    "id": "village/village.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/scene.js": "core/scene.js",
+      "../core/loop.js": "core/loop.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/rng.js": "core/rng.js",
+      "../core/events.js": "core/events.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../core/audio.js": "core/audio.js",
+      "../state.js": "state.js",
+      "../core/util.js": "core/util.js",
+      "./economy.js": "village/economy.js",
+      "./buildings.js": "village/buildings.js"
+    }
+  },
+  {
+    "id": "village/buildui.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/input.js": "core/input.js",
+      "../core/scene.js": "core/scene.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../core/audio.js": "core/audio.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../core/font.js": "core/font.js",
+      "../state.js": "state.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/util.js": "core/util.js",
+      "./village.js": "village/village.js",
+      "./buildings.js": "village/buildings.js",
+      "./economy.js": "village/economy.js"
+    }
+  },
+  {
+    "id": "missions/missions.js",
+    "deps": {
+      "../state.js": "state.js",
+      "../core/events.js": "core/events.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../core/audio.js": "core/audio.js",
+      "../core/rng.js": "core/rng.js",
+      "../village/economy.js": "village/economy.js"
+    }
+  },
+  {
+    "id": "missions/missionui.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/input.js": "core/input.js",
+      "../core/scene.js": "core/scene.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../core/audio.js": "core/audio.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../core/font.js": "core/font.js",
+      "../state.js": "state.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/util.js": "core/util.js",
+      "./missions.js": "missions/missions.js"
+    }
+  },
+  {
+    "id": "dev/minimal-ui.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/scene.js": "core/scene.js",
+      "../core/input.js": "core/input.js",
+      "../core/font.js": "core/font.js",
+      "../core/bridge.js": "core/bridge.js",
+      "../core/audio.js": "core/audio.js",
+      "../art/palette.js": "art/palette.js"
+    }
+  },
+  {
+    "id": "dev/fallback.js",
+    "deps": {
+      "../core/renderer.js": "core/renderer.js",
+      "../core/scene.js": "core/scene.js",
+      "../core/input.js": "core/input.js",
+      "../art/atlas.js": "art/atlas.js",
+      "../art/palette.js": "art/palette.js",
+      "../core/loop.js": "core/loop.js",
+      "../state.js": "state.js"
+    }
+  },
+  {
+    "id": "art/premium-assets.js",
+    "deps": {
+      "./atlas.js": "art/atlas.js"
+    }
+  },
+  {
+    "id": "main.js",
+    "deps": {
+      "./core/renderer.js": "core/renderer.js",
+      "./core/input.js": "core/input.js",
+      "./core/scene.js": "core/scene.js",
+      "./core/loop.js": "core/loop.js",
+      "./core/font.js": "core/font.js",
+      "./core/audio.js": "core/audio.js",
+      "./art/atlas.js": "art/atlas.js",
+      "./art/palette.js": "art/palette.js",
+      "./state.js": "state.js",
+      "./core/events.js": "core/events.js",
+      "./core/rng.js": "core/rng.js",
+      "./core/bridge.js": "core/bridge.js",
+      "./art/tiles.js": "art/tiles.js",
+      "./art/sprites.js": "art/sprites.js",
+      "./art/creatures.js": "art/creatures.js",
+      "./art/effects.js": "art/effects.js",
+      "./art/uiart.js": "art/uiart.js",
+      "./art/premium-assets.js": "art/premium-assets.js",
+      "./audio/songs.js": "audio/songs.js",
+      "./ui/frame.js": "ui/frame.js",
+      "./ui/textbox.js": "ui/textbox.js",
+      "./ui/menu.js": "ui/menu.js",
+      "./ui/hud.js": "ui/hud.js",
+      "./ui/transition.js": "ui/transition.js",
+      "./ui/party.js": "ui/party.js",
+      "./ui/title.js": "ui/title.js",
+      "./ui/pause.js": "ui/pause.js",
+      "./world/overworld.js": "world/overworld.js",
+      "./world/daynight.js": "world/daynight.js",
+      "./battle/scene.js": "battle/scene.js",
+      "./village/village.js": "village/village.js",
+      "./village/buildui.js": "village/buildui.js",
+      "./missions/missions.js": "missions/missions.js",
+      "./missions/missionui.js": "missions/missionui.js",
+      "./dev/minimal-ui.js": "dev/minimal-ui.js",
+      "./dev/fallback.js": "dev/fallback.js"
+    }
+  }
+]
