@@ -21,6 +21,18 @@ Use case: stylized-concept. Asset type: polished landscape background art for th
 Use case: stylized-concept. Asset type: game battle environment background for original cozy fantasy creature RPG Guardians of the Hearth. Wide 16:9 landscape, finished professional richly illustrated 2D game art with readable stylized forms and crisp detail suitable for downsampling to pixel RPG. A sun-dappled enchanted woodland clearing, mossy ancient trees and ferns framing both edges, layered deep teal foliage in the distance, warm golden sunlight filtering from upper left. Two clear smooth oval grass-and-earth patches: near platform centered at 24 percent width and 73 percent height, far platform centered at 73 percent width and 47 percent height. Open central space, soft grassy ground, small wildflowers confined to edges, distant narrow sparkling stream. Camera three-quarter side view looking across clearing. Foreground lower quarter subdued earthy green space for command HUD overlay. NO creatures, people, text, UI, borders, lettering, logos or watermark. Beautiful lush calm welcoming mood, strong foreground/background separation, original world identity.
 # World art v2
 
+## Aquarabbit starter poses (v3)
+
+Generated with the built-in image generation tool in text-to-image mode on
+2026-09-09. `aquarabbit-poses.png` preserves the generated transparent source.
+`aquarabbit-front.webp` and `aquarabbit-back.webp` use the shared 160×160 frame
+and 80×80 logical footprint, prepared by `scripts/prepare-guardian-art.mjs`.
+No reference image was passed to the tool. Exact prompt:
+
+> Production sprite sheet for an ORIGINAL cozy fantasy pixel RPG creature called Aquarabbit, a gentle water guardian. Genuinely transparent background alpha, NO ground NO text NO labels NO borders. Exactly two full-body poses arranged horizontally in equal left and right square cells, no overlap, generous transparent padding. LEFT CELL front three-quarter view looking toward left (opposing creature faces screen left). RIGHT CELL rear three-quarter view looking away toward upper right (player companion viewed from behind, showing back, tail, backs of ears, hint of cheek). Both same adorable small aqua-blue woodland hare with large asymmetrical finlike long ears, pale cream-blue throat and chest fluff, sea-teal lower legs, expressive dark navy eyes with warm bright highlights, small rounded nose, soft cheek tufts, and a distinctive translucent teardrop-shaped tail with tiny ripple ridges. Petite sturdy four-legged crouched rabbit stance, strong clear silhouette, hand-crafted fur and soft water-fin textures. Distinctive pond creature with no accessories or markings from existing franchises. Rich blue pixel clusters and pale aqua rim light, deeper teal undersides, warm top-left sunlight. Premium artisanal 32-bit RPG pixel sprite craft, crisp visible square pixel clusters with refined depth, not smooth vector shapes, no 3D. Each pose silhouette occupies about70% of cell, feet near bottom85%, consistent anatomical scale in both poses. All ear tips and feet fully contained. Friendly woodland companion, same detailed sprite craftsmanship as a warm copper fox cub and a layered green leaf owl.
+
+## Embercub, Leafowl and oak
+
 Embercub battle poses: `embercub-poses.png` is the generated transparent source;
 `embercub-front.webp` and `embercub-back.webp` share the Leafowl frame dimensions
 and foot baseline. Generated with the built-in image generation tool. Prompt:

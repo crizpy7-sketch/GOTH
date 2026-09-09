@@ -1327,22 +1327,26 @@ const HOOKS = {
     return cache.solid.has(x + ',' + y);
   },
 
-  interact(map, x, y) {
+  interact(map, x, y, { preview = false } = {}) {
     if (!map || (map.id !== VILLAGE_MAP && !map.village)) return null;
-    ensureState();
-    ensureLayout(map);
+    // The world also asks for a hint while facing an object. Map entry and the
+    // village render hooks maintain this geometry; previews never mutate state
+    // or rebuild the layout just to display an interaction label.
+    if (!preview) { ensureState(); ensureLayout(map); }
+    else if (cache.mapId !== map.id) return null;
     const b = cache.doors.get(x + ',' + y) || buildingAt(x, y);
     if (b) {
       if (b.type === 'hearthstone') {
-        return async () => {
+        return Object.assign(async () => {
           await UIx.say(defFor('hearthstone').doorLine, { speaker: 'Hearthstone' });
           Scenes.push('village');
-        };
+        }, { hint: ['Visit', 'Hearthstone'] });
       }
-      return async () => openBuildingMenu(b);
+      return Object.assign(async () => openBuildingMenu(b), { hint: ['Manage', defFor(b.type).name] });
     }
-    const plot = plotList().find(p => p.x === x && p.y === y);
-    if (plot) return async () => openPlot(plot);
+    const heart = builtList().find(b => b.type === 'hearthstone') || DEFAULT_HEARTH;
+    const i = PLOTS.findIndex(p => heart.x + p.dx === x && heart.y + p.dy === y);
+    if (i >= 0) return Object.assign(async () => openPlot({ i, x, y }), { hint: ['Plan', 'Empty plot'] });
     return null;
   },
 

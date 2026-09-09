@@ -21,18 +21,21 @@ const { Hooks, UIx } = await import('../src/core/bridge.js');
 const { HUD, journeyGoal } = await import('../src/ui/hud.js');
 const { register: registerPause } = await import('../src/ui/pause.js');
 const { register: registerMissionUI } = await import('../src/missions/missionui.js');
+const { register: registerParty, leadGuardian, sendGuardianHome, inviteGuardian } = await import('../src/ui/party.js');
+const { makeGuardian } = await import('../src/battle/species.js');
 const Missions = await import('../src/missions/missions.js');
 initInput(window);
 buildFont();
 registerPause();
 registerMissionUI();
+registerParty();
 Scenes.register('title', () => ({}));
 Scenes.register('overworld', () => ({}));
 const drawn = [], said = [], notices = [];
 Frame.panel = () => {};
 Frame.write = (text, x, y, style, opts = {}) => drawn.push({ text: String(text), x, y, ...opts });
 R.layer = (_, draw) => draw();
-R.rect = R.stroke = R.blit = () => {};
+R.rect = R.stroke = R.blit = R.glow = () => {};
 R.text = (text, x, y, opts = {}) => drawn.push({ text: String(text), x, y, ...opts });
 UIx.install({
   panel() {},
@@ -65,6 +68,161 @@ beforeEach(() => {
   now = 0;
   drawn.length = said.length = notices.length = 0;
   localStorage.setItem = () => {};
+  UIx.install({ async ask() { return -1; } });
+});
+
+const companion = (id, opts = {}) => makeGuardian('embercub', 5, { id, ...opts });
+
+test('a ready Guardian can become the travelling lead in one action without changing anyone else', () => {
+  const team = ['one', 'two', 'three'].map(id => companion(id));
+  S.party.push(...team);
+  const hp = team[2].hp, focus = team[2].moves.map(m => m.focus);
+  assert.equal(leadGuardian(2).ok, true);
+  assert.deepEqual(S.party.map(g => g.id), ['three', 'one', 'two']);
+  assert.equal(S.party[0], team[2]);
+  assert.equal(S.party[0].hp, hp);
+  assert.deepEqual(S.party[0].moves.map(m => m.focus), focus);
+  S.party[1].hp = 0;
+  assert.equal(leadGuardian(1).ok, false);
+  assert.equal(S.party[0].id, 'three');
+  assert.equal(leadGuardian(0).ok, false);
+});
+
+test('sending a Guardian home preserves the last ready companion and every roster member', () => {
+  S.party.push(companion('one'));
+  assert.equal(sendGuardianHome(0).ok, false);
+  const resting = companion('two'); resting.hp = 0;
+  S.party.push(resting);
+  assert.equal(sendGuardianHome(0).ok, false);
+  assert.equal(sendGuardianHome(1).ok, true);
+  assert.deepEqual(S.party.map(g => g.id), ['one']);
+  assert.deepEqual(S.box.map(g => g.id), ['two']);
+  assert.equal(S.box[0].hp, 0, 'moving home does not silently heal or reset the Guardian');
+});
+
+test('a full team can exchange home Guardians without losing health, focus, identity or roster capacity', () => {
+  S.party.push(...Array.from({ length: 6 }, (_, i) => companion(`travel${i}`)));
+  const visitor = companion('home'); visitor.hp = 1; visitor.moves[0].focus = 0;
+  S.box.push(visitor);
+  const resting = S.party[3];
+  assert.equal(inviteGuardian(0).ok, false, 'a full team needs an explicit replacement');
+  assert.equal(inviteGuardian(0, 3).ok, true);
+  assert.equal(S.party.length, 6); assert.equal(S.box.length, 1);
+  assert.equal(S.party[3], visitor); assert.equal(S.box[0], resting);
+  assert.equal(S.party[3].hp, 1); assert.equal(S.party[3].moves[0].focus, 0);
+  assert.equal(new Set([...S.party, ...S.box].map(g => g.id)).size, 7);
+  S.party.forEach((g, i) => { g.hp = i === 0 ? 1 : 0; });
+  S.box[0].hp = 0;
+  assert.equal(inviteGuardian(0, 0).ok, false, 'a resting Guardian cannot replace the last ready one');
+});
+
+test('roster tabs and home pagination work with the same direction and action controls as mobile menus', async () => {
+  S.party.push(companion('lead'));
+  S.box.push(...Array.from({ length: 8 }, (_, i) => companion(`home${i}`, { nick: `Friend ${i}` })));
+  const choices = [];
+  UIx.install({ async ask(text, options) { choices.push({ text, options }); return 0; } });
+  Scenes.push('party');
+  await press('up'); await press('right'); await press('down');
+  await press('down'); await press('down'); await press('down');
+  Scenes.render();
+  assert.ok(drawn.some(row => row.text.includes('Page 2/2')));
+  assert.ok(drawn.some(row => row.text === 'Friend 6'));
+  await press('b');
+  drawn.length = 0; Scenes.render();
+  assert.ok(drawn.some(row => row.text.includes('choose a roster')), 'Back reaches roster tabs from any home page');
+  await press('down');
+  await press('a');
+  assert.equal(choices[0].options[0], 'Join the adventure');
+  assert.deepEqual(S.party.map(g => g.id), ['lead', 'home6']);
+  assert.equal(S.box.length, 7);
+  drawn.length = 0; Scenes.render();
+  assert.ok(drawn.some(row => row.text === 'LEAD'));
+  assert.ok(drawn.some(row => row.text === 'Friend 6 joins your adventure.'));
+});
+
+test('party and home cards, tabs and instructions fit on the complete playfield', async () => {
+  S.party.push(...Array.from({ length: 6 }, (_, i) => companion(`g${i}`, { nick: 'A deliberately long name' })));
+  S.box.push(...Array.from({ length: 7 }, (_, i) => companion(`h${i}`)));
+  Scenes.push('party');
+  for (const step of [null, 'up', 'right', 'down']) {
+    if (step) await press(step);
+    drawn.length = 0; Scenes.render();
+    for (const row of drawn) {
+      const width = Font.measure(row.text);
+      const left = row.align === 'right' ? row.x - width : row.align === 'center' ? row.x - width / 2 : row.x;
+      assert.ok(left >= 0 && left + width <= R.W, `${row.text} exceeds horizontal bounds`);
+      assert.ok(row.y >= 0 && row.y + 8 <= R.H, `${row.text} exceeds vertical bounds`);
+    }
+  }
+});
+
+test('roster tabs and cards accept direct screen taps, ignore overlays and clean up their listener', async () => {
+  const priorGet = document.getElementById;
+  const handlers = new Map();
+  const screen = {
+    addEventListener: (event, fn) => handlers.set(event, fn),
+    removeEventListener: event => handlers.delete(event),
+    getBoundingClientRect: () => ({ left: 50, top: 40, width: 640, height: 360 }),
+  };
+  document.getElementById = id => id === 'screen' ? screen : null;
+  const requests = [];
+  UIx.install({ async ask(text, options) { requests.push({ text, options }); return -1; } });
+  const tap = (x, y) => handlers.get('pointerdown')({ clientX: 50 + x * 2, clientY: 40 + y * 2, preventDefault() {} });
+  try {
+    S.party.push(companion('travelling')); S.box.push(companion('home', { nick: 'Home friend' }));
+    Scenes.push('party');
+    tap(220, 26);
+    Scenes.render();
+    assert.ok(drawn.some(row => row.text === 'Home friend'));
+    tap(40, 55); await Promise.resolve();
+    assert.equal(requests[0].options[0], 'Join the adventure');
+    Scenes.push('pause');
+    tap(40, 55); await Promise.resolve();
+    assert.equal(requests.length, 1, 'an overlay owns its inputs');
+    Scenes.pop(); Scenes.pop();
+    assert.equal(handlers.size, 0);
+  } finally { document.getElementById = priorGet; }
+});
+
+test('battle selection never exposes home management or changes the travelling roster', async () => {
+  const active = companion('active'), rested = companion('rested'), ready = companion('ready');
+  rested.hp = 0;
+  S.party.push(active, rested, ready); S.box.push(companion('home'));
+  const picked = Scenes.pushAsync('party', { picking: true, active: 0 });
+  Scenes.render();
+  assert.ok(!drawn.some(row => row.text.includes('AT HOME')));
+  await press('a');
+  assert.equal(await picked, 2);
+  assert.deepEqual(S.party.map(g => g.id), ['active', 'rested', 'ready']);
+});
+
+test('first-journey guidance counts wild friends and actual cottages rather than the starter or any decoration', () => {
+  S.party.push(companion('starter'));
+  S.flags.metMayor = true;
+  const map = { id: 'village', npcs: [] };
+  assert.equal(journeyGoal(map).title, 'A new friend in the valley');
+  S.bag.charm = 0;
+  assert.equal(journeyGoal(map).hint, 'Find Cobb in Gladewind Meadow for charms.');
+  const cobb = { who: 'peddler', x: 24, y: 20 };
+  assert.equal(journeyGoal({ id: 'meadow', npcs: [cobb] }).target, cobb);
+  S.box.push(companion('newfriend'));
+  S.stats.built = 4;
+  S.village.buildings.push({ type: 'garden' });
+  assert.equal(journeyGoal(map).title, 'A first home in Emberhollow');
+  assert.equal(journeyGoal({ id: 'forest' }).hint, 'Return to Emberhollow to build a cottage.');
+  S.village.buildings.push({ type: 'cottage' });
+  assert.equal(journeyGoal(map).title, 'Good things, done together');
+  S.box.push(...S.party.splice(0));
+  assert.equal(journeyGoal(map).title, 'A companion for the road', 'existing home Guardians do not send players back to an exhausted starter gift');
+});
+
+test('the journal shows the next destination and accurate travelling, home and village counts', () => {
+  S.party.push(companion('starter')); S.box.push(companion('home'));
+  S.village.buildings.push({ type: 'cottage' }, { type: 'garden' });
+  Scenes.push('pause'); Scenes.render();
+  assert.ok(drawn.some(row => row.text === 'Meet Mayor Bramble'));
+  assert.ok(drawn.some(row => row.text === '1/6 travelling  ·  1 at home'));
+  assert.ok(drawn.some(row => row.text === 'Village Lv 1  ·  1 home'));
 });
 
 test('E interacts, mixed physical keys release independently, browser fields and shortcuts keep their keys', () => {

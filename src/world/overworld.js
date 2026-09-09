@@ -255,25 +255,50 @@ export async function enterMap(id, x, y, dir = 'down', { fade = true } = {}) {
 }
 
 // --- interaction -------------------------------------------------------------
-async function interact() {
+const TAG_HINTS = {
+  sign: ['Read', 'Sign'], well: ['Inspect', 'Well'], bench: ['Inspect', 'Bench'],
+  mail: ['Check', 'Post box'], hearthfire: ['Inspect', 'Hearth'], stove: ['Inspect', 'Stove'],
+  painting: ['Look at', 'Painting'], anvil: ['Inspect', 'Anvil'], loom: ['Inspect', 'Loom'],
+};
+
+// Prompts and button presses resolve the same target, in the same priority order.
+// Preview only reads village geometry; merely facing a chest never opens it.
+function interactionTarget({ preview = false } = {}) {
+  if (!map || !player) return null;
   const v = DIR_VEC[player.dir];
   const tx = player.x + v.x, ty = player.y + v.y;
 
   const npc = npcs.find(n => n.x === tx && n.y === ty);
-  if (npc) { busy = true; try { await npc.interact(); } finally { busy = false; } return; }
+  if (npc) return {
+    tx, ty, hint: npc.moving ? null : ['Talk to', nameOf(npc.who)],
+    run: () => npc.interact(),
+  };
 
   let handler = null;
-  try { handler = Hooks.village.interact(map, tx, ty); } catch {}
-  if (handler) { busy = true; try { await handler(); } finally { busy = false; } return; }
+  try { handler = Hooks.village.interact(map, tx, ty, { preview }); } catch {}
+  if (handler) return { tx, ty, hint: handler.hint || ['Inspect', ''], run: handler };
 
   const tag = map.tag(tx, ty);
-  if (tag) { busy = true; try { await interactTag(tag, tx, ty); } finally { busy = false; } return; }
+  if (tag) {
+    const hint = tag === 'chest'
+      ? [S.flags[`chest.${map.id}.${tx}.${ty}`] ? 'Check' : 'Open', 'Chest']
+      : TAG_HINTS[tag];
+    return { tx, ty, hint, run: () => interactTag(tag, tx, ty) };
+  }
 
   // Facing water with nothing to do reads better as a beat than as silence.
-  if (map.isWater(tx, ty)) {
-    busy = true;
-    try { await UIx.say('The water is clear all the way to the stones.'); } finally { busy = false; }
-  }
+  if (map.isWater(tx, ty)) return {
+    tx, ty, hint: ['Look at', 'Water'],
+    run: () => UIx.say('The water is clear all the way to the stones.'),
+  };
+  return null;
+}
+
+async function interact() {
+  const target = interactionTarget();
+  if (!target) return;
+  busy = true;
+  try { await target.run(); } finally { busy = false; }
 }
 
 async function interactTag(tag, tx, ty) {
@@ -740,6 +765,42 @@ function drawFx(cam) {
   });
 }
 
+function drawInteractionPrompt() {
+  if (busy || doorWarping || UIx.busy || UIx.transitioning || Scenes.topName !== 'overworld'
+      || S.settings.showHints === false || player.moving || player.hop
+      || document.body.classList.contains('build-active')) return;
+  const target = interactionTarget({ preview: true });
+  if (!target?.hint) return;
+
+  const [action, name] = target.hint;
+  const key = Input.label('a');
+  let label = [action, name].filter(Boolean).join(' ');
+  const keyW = Math.max(12, R.measure(key) + 8);
+  const maxText = 158 - keyW;
+  while (R.measure(label) > maxText && label.length > 1) label = label.slice(0, -2) + '…';
+  const w = R.measure(label) + keyW + 13, h = 15;
+  // UI coordinates stay crisp at either world zoom. The plaque sits above both
+  // people when facing down, so it never hides the player or a villager's face.
+  const z = R.worldZoom;
+  const cx = (target.tx * TILE + TILE / 2 - R.camera.x) * z;
+  const top = (Math.min(target.ty * TILE, player.py) - 8 - R.camera.y) * z;
+  const x = Math.round(clamp(cx - w / 2, 4, R.W - w - 4));
+  const y = Math.round(clamp(top - h - 5, 23, R.H - h - 20));
+  R.layer(LAYER.UI, () => {
+    R.rect(x + 1, y + 1, w, h, 'rgba(7,18,17,0.3)');
+    R.rect(x, y, w, h, 'rgba(17,34,30,0.95)');
+    R.stroke(x, y, w, h, '#a49468');
+    R.rect(x + 3, y + 3, keyW, 9, '#dbbd7a');
+    R.text(key, x + 3 + keyW / 2, y + 4, { color: '#26392e', shadow: false, align: 'center' });
+    R.text(label, x + keyW + 7, y + 4, { color: '#fff2cf', shadow: false });
+    // A quiet pointer ties the compact label to the object it will act on.
+    const tip = Math.round(clamp(cx, x + 6, x + w - 7));
+    R.rect(tip - 2, y + h, 5, 1, '#a49468');
+    R.rect(tip - 1, y + h + 1, 3, 1, '#a49468');
+    R.rect(tip, y + h + 2, 1, 1, '#a49468');
+  });
+}
+
 function render() {
   if (!map) return;
   R.worldZoom = map.indoor ? 1 : 0.75;
@@ -775,6 +836,7 @@ function render() {
     if (UIx.drawToasts) UIx.drawToasts();
   });
   try { Hooks.hud?.draw?.(map); } catch {}
+  drawInteractionPrompt();
 }
 
 // --- scene -------------------------------------------------------------------

@@ -13,13 +13,26 @@ const errors=[];
 page.on('pageerror',e=>errors.push(e.message));
 const shot = name => page.screenshot({path:`artifacts/${name}.png`});
 const scene = name => page.waitForFunction(n=>window.__game?.scene===n,name);
+// Observe the text actually painted by the game, without adding test-only state
+// to the shipped scenes. Each frame replaces the previous observations.
+async function observeCanvas(p) {
+  await p.evaluate(async()=>{
+    const {R}=await import(window.__MODULE_URLS['core/renderer.js']);
+    const begin=R.begin.bind(R), text=R.text.bind(R);
+    window.__paintedText=[];
+    R.begin=(...args)=>{__paintedText.length=0;return begin(...args);};
+    R.text=(value,...args)=>{__paintedText.push(String(value).slice(0,args[2]?.limit));return text(value,...args);};
+  });
+}
+const painted = (p,text) => p.waitForFunction(value=>window.__paintedText?.some(row=>row.includes(value)),text);
+const key = async name => {await page.keyboard.press(name);await page.waitForTimeout(80);};
 try {
   await page.goto(base+'/?autostart=1');
   await page.waitForFunction(()=>window.__boot?.ready);
   assert.deepEqual(await page.evaluate(()=>__game.boot.failed),[]);
   assert.deepEqual(await page.evaluate(()=>__game.boot.missing),[]);
   const artSizes=await page.evaluate(()=>Object.fromEntries(
-    ['t.grass','c.hero.down','scene.battle','t.tree.oak'].map(name=>{
+    ['t.grass','c.hero.down','scene.battle','t.tree.oak','g.aquarabbit.front','g.aquarabbit.back'].map(name=>{
       const image=__ATLAS__.get(name);
       return [name,[image.width,image.height,image.logicalWidth,image.logicalHeight]];
     })
@@ -29,6 +42,8 @@ try {
     'c.hero.down':[32,48,16,24],
     'scene.battle':[640,360,320,180],
     't.tree.oak':[144,192,48,64],
+    'g.aquarabbit.front':[160,160,80,80],
+    'g.aquarabbit.back':[160,160,80,80],
   },'detailed assets retain their gameplay footprints');
   assert.deepEqual(await page.locator('#screen').evaluate(c=>[c.width,c.height]),[960,540]);
   await page.locator('#veil').waitFor({state:'hidden'});
@@ -46,6 +61,7 @@ try {
     await page.keyboard.press('Enter');await page.waitForTimeout(220);
   }
   await scene('overworld');
+  await observeCanvas(page);
   assert.equal(await page.locator('#titleScreen').isVisible(),false);
   const before = await page.evaluate(()=>({...__game.state.player}));
   await page.keyboard.down('ArrowDown');await page.waitForTimeout(350);await page.keyboard.up('ArrowDown');
@@ -75,8 +91,36 @@ try {
   await page.keyboard.press('Enter');await page.waitForTimeout(150);await shot('battle-moves');
   await page.keyboard.press('Enter');await page.waitForTimeout(1200);await shot('battle-hit');
   await page.evaluate(()=>__game.goto('battle'));await page.waitForTimeout(1800);
-  await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
+  await key('ArrowRight');await key('ArrowRight');await key('ArrowRight');await key('Enter');
+  await painted(page,'Woven Charm');
   await page.waitForTimeout(160);await shot('battle-bag');
+  await key('Escape');await key('ArrowLeft');await key('ArrowLeft');await key('Enter');
+  await painted(page,'WOVEN CHARM');
+  const charmsBeforeCancel=await page.evaluate(()=>__game.state.bag.charm);
+  await shot('battle-bond');
+  await key('Escape');
+  assert.equal(await page.evaluate(()=>__game.state.bag.charm),charmsBeforeCancel,'leaving a bond preview spends nothing');
+  // A full travelling team can retrieve a Guardian at home and choose a new
+  // walking companion through the same controls used by a player.
+  await page.evaluate(async()=>{
+    const {makeGuardian}=await import(window.__MODULE_URLS['battle/species.js']);
+    __game.state.party=Array.from({length:6},(_,i)=>makeGuardian(i%2?'leafowl':'embercub',5,{id:`g${100+i}`}));
+    __game.state.box=[makeGuardian('aquarabbit',6,{id:'g200'})];
+    __game.goto('party');
+  });
+  await scene('party');await painted(page,'TRAVELLING');
+  await key('ArrowUp');await key('ArrowRight');await key('ArrowDown');
+  await shot('party-home');
+  await key('Enter');await painted(page,'Join the adventure');await key('Enter');
+  await painted(page,'Who will stay at home?');
+  await key('Escape');await scene('party');
+  assert.deepEqual(await page.evaluate(()=>__game.state.party.map(g=>g.id)),['g100','g101','g102','g103','g104','g105'],'cancelling a replacement preserves the whole team');
+  await key('Enter');await painted(page,'Join the adventure');await key('Enter');
+  await painted(page,'Who will stay at home?');
+  await key('ArrowDown');await key('Enter');await scene('party');
+  assert.deepEqual(await page.evaluate(()=>[__game.state.party[1].id,__game.state.box[0].id]),['g200','g101'],'full-team swap conserves both Guardians');
+  await key('Enter');await painted(page,'Travel beside me');await key('ArrowDown');await key('Enter');await scene('party');
+  assert.equal(await page.evaluate(()=>__game.state.party[0].species),'aquarabbit','Travel beside me changes the actual lead');
   await page.evaluate(()=>__game.goto('party'));await scene('party');await shot('party');
   await page.evaluate(()=>__game.goto('missions'));await scene('missions');await shot('missions');
   await page.evaluate(()=>__game.goto('village'));await scene('village');await shot('village');
@@ -92,11 +136,33 @@ try {
     placementCamera,'placement opens at the correct camera scale without a first-frame jump');
   await shot('placement');
   await page.keyboard.press('Escape');await scene('overworld');
+  await page.evaluate(()=>{__game.state.flags.gotStarter=true;__game.goto('overworld',{map:'granhouse',x:10,y:8,dir:'up'});});
+  await painted(page,'Talk to Gran Willow');await shot('interaction-gran');
+  await key('Enter');await scene('__say');
+  assert.ok(!(await page.evaluate(()=>__paintedText)).includes('Talk to Gran Willow'),'interaction prompt clears beneath dialogue');
+  for(let i=0;i<16 && await page.evaluate(()=>__game.scene!=='overworld');i++) {await key('Enter');await page.waitForTimeout(160);}
+  await scene('overworld');
+  await page.evaluate(()=>__game.goto('overworld',{map:'meadow',x:23,y:20,dir:'right'}));
+  await painted(page,'Talk to Cobb');await key('Enter');
+  const shopOpen=()=>page.evaluate(async()=>{
+    const {Scenes}=await import(window.__MODULE_URLS['core/scene.js']);
+    return Scenes.top?.__params?.choices?.some(c=>c.startsWith('Woven Charm'));
+  });
+  for(let i=0;i<8 && !(await shopOpen());i++) {await key('Enter');await page.waitForTimeout(160);}
+  await painted(page,'Leave the stall');await shot('cobb-shop');
+  const supplies=await page.evaluate(()=>({coins:__game.state.coins,charms:__game.state.bag.charm}));
+  await key('Enter');
+  await page.waitForFunction(before=>__game.state.bag.charm===before.charms+1,supplies);
+  for(let i=0;i<8 && !(await shopOpen());i++) {await key('Enter');await page.waitForTimeout(160);}
+  await painted(page,'Leave the stall');await key('Escape');await scene('overworld');
+  assert.deepEqual(await page.evaluate(()=>({coins:__game.state.coins,charms:__game.state.bag.charm})),
+    {coins:supplies.coins-12,charms:supplies.charms+1},'Cobb sells one charm and leaving the shop makes no second purchase');
+  await page.evaluate(()=>__game.goto('overworld',{map:'village',x:22,y:24}));
   assert.equal(await page.evaluate(()=>__game.save()),true);
-  const saved=await page.evaluate(()=>({party:__game.state.party.length,steps:__game.state.stats.steps}));
+  const saved=await page.evaluate(()=>({party:__game.state.party.map(g=>g.id),home:__game.state.box.map(g=>g.id),steps:__game.state.stats.steps,bag:__game.state.bag}));
   await page.reload();await page.waitForFunction(()=>__boot?.ready);
   assert.ok(await page.getByRole('button',{name:'Continue journey'}).isVisible());
-  assert.deepEqual(await page.evaluate(()=>({party:__game.state.party.length,steps:__game.state.stats.steps})),saved);
+  assert.deepEqual(await page.evaluate(()=>({party:__game.state.party.map(g=>g.id),home:__game.state.box.map(g=>g.id),steps:__game.state.stats.steps,bag:__game.state.bag})),saved);
   await page.getByRole('button',{name:'Continue journey'}).click();await scene('overworld');
   assert.equal(await page.locator('#titleScreen').isVisible(),false);
   // The first FPS window includes boot and sprite realization after reload.
@@ -153,12 +219,22 @@ try {
   await phone.locator('#tA').tap();await phone.waitForFunction(()=>__game.scene==='settings');
   await phone.locator('#tB').tap();await phone.waitForFunction(()=>__game.scene==='pause');
   await phone.locator('#tB').tap();await phone.waitForFunction(()=>__game.scene==='overworld');
+  await observeCanvas(phone);
+  await phone.evaluate(()=>{__game.grantStarter('aquarabbit');__game.push('battle',{speciesId:'aquarabbit'});});
+  await painted(phone,'Fight');
+  const battleStick=await phone.locator('#tpad').boundingBox();
+  await phone.locator('#tpad').tap({position:{x:battleStick.width-8,y:battleStick.height/2}});
+  await phone.waitForTimeout(90);await phone.locator('#tA').tap();
+  await painted(phone,'WOVEN CHARM');
+  assert.equal(await phone.locator('#tF').isVisible(),false,'fullscreen button leaves the battle status card clear');
+  await phone.screenshot({path:'artifacts/mobile-bond.png'});
+  await phone.locator('#tB').tap();await painted(phone,'Fight');
   await phone.setViewportSize({width:390,height:844});await phone.waitForTimeout(300);
   assert.ok(await phone.locator('#rotateGate').isVisible(),'portrait instruction visible');
   await phone.screenshot({path:'artifacts/mobile-portrait.png'});
   await mobile.close();
   assert.deepEqual(errors,[]);
-  const result={pass:true,checks:['boot modules','HD asset footprints','seasonal sprite transparency','native title menu','new game onboarding','movement','journal','seasons','battle','party','missions','village','save reload','continue','mobile fullscreen layout','touch movement and running','touch menu navigation','portrait gate'],fps,errors};
+  const result={pass:true,checks:['boot modules','all starter HD asset footprints','seasonal sprite transparency','native title menu','new game onboarding','movement','journal','seasons','battle','bond preview and cancellation','full-team home swap and cancellation','walking companion selection','named interaction prompt and dialogue suppression','Cobb shop purchase and exit','party','missions','village','roster and inventory save reload','continue','mobile fullscreen layout','touch movement and running','touch menu navigation','touch bond preview','portrait gate'],fps,errors};
   await writeFile('artifacts/browser-results.json',JSON.stringify(result,null,2));
   console.log(JSON.stringify(result,null,2));
 } catch(e) {await shot('failure');console.error('Page errors:',errors);throw e;}
