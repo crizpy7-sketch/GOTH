@@ -261,6 +261,7 @@ function initTouch() {
     if (!document.body?.dataset) return;
     const scene = Scenes.topName;
     const mode = scene === 'overworld' ? 'world' : scene === '__say' ? 'dialogue'
+      : scene === 'story' ? 'story'
       : scene === 'battle' ? 'battle' : scene === 'build' ? 'build'
       : scene === 'title' ? 'title' : 'menu';
     if (mode !== touchMode) {
@@ -268,8 +269,35 @@ function initTouch() {
       touchMode = mode;
       document.body.dataset.touchMode = mode;
       const a = document.getElementById('tA'), b = document.getElementById('tB');
-      if (a) a.textContent = mode === 'menu' ? 'Select' : 'A';
-      if (b) b.textContent = mode === 'menu' ? 'Back' : 'B';
+      if (a) {
+        a.disabled = false;
+        a.textContent = mode === 'menu' ? 'Select' : 'A';
+        a.setAttribute?.('aria-label', 'Interact or confirm');
+      }
+      if (b) {
+        b.disabled = false;
+        b.textContent = mode === 'menu' ? 'Back' : 'B';
+        b.setAttribute?.('aria-label', 'Back or cancel');
+      }
+    }
+    if (mode === 'story') {
+      const phase = Scenes.top?.touchPhase || 'narrative';
+      const choices = phase === 'choices';
+      const pending = phase === 'pending';
+      const next = phase === 'reveal' ? 'Reveal' : pending ? '…' : 'Next';
+      document.body.dataset.storyChoices = choices ? 'yes' : 'no';
+      for (const [id, label, description] of [
+        ['tA', choices ? 'Choose' : next, choices ? 'Choose this response' : phase === 'reveal' ? 'Reveal dialogue' : 'Next dialogue'],
+        ['tB', choices ? 'Back' : next, choices ? 'Back from choices' : phase === 'reveal' ? 'Reveal dialogue' : 'Next dialogue'],
+      ]) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.textContent !== label) {
+          el.textContent = label;
+          el.setAttribute?.('aria-label', description);
+        }
+        el.disabled = pending;
+      }
     }
     if (mode === 'dialogue') {
       const choices = Scenes.top?.__params?.choices?.length || 0;

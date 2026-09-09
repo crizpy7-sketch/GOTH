@@ -82,6 +82,7 @@ export async function boot({ veil, startBtn, setBoot }) {
   const ui = {
     frame: await soft('./ui/frame.js', 'ui/frame'),
     textbox: await soft('./ui/textbox.js', 'ui/textbox'),
+    story: await soft('./ui/story.js', 'ui/story'),
     menu: await soft('./ui/menu.js', 'ui/menu'),
     hud: await soft('./ui/hud.js', 'ui/hud'),
     transition: await soft('./ui/transition.js', 'ui/transition'),

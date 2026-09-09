@@ -136,7 +136,7 @@ try {
     placementCamera,'placement opens at the correct camera scale without a first-frame jump');
   await shot('placement');
   await page.keyboard.press('Escape');await scene('overworld');
-  await page.evaluate(()=>{__game.state.flags.gotStarter=true;__game.goto('overworld',{map:'granhouse',x:10,y:8,dir:'up'});});
+  await page.evaluate(()=>{__game.state.flags.gotStarter=true;__game.state.flags['story.granHearth']=true;__game.goto('overworld',{map:'granhouse',x:10,y:8,dir:'up'});});
   await painted(page,'Talk to Gran Willow');await shot('interaction-gran');
   await key('Enter');await scene('__say');
   assert.ok(!(await page.evaluate(()=>__paintedText)).includes('Talk to Gran Willow'),'interaction prompt clears beneath dialogue');

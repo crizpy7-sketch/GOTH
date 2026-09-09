@@ -10,6 +10,11 @@ const modules = new Map();
 const specifier = /(['"])(\.\.?\/[^'"]*\.js)\1/g;
 for (const id of names) {
   let code = await read(`src/${id}`);
+  code = code.replace('__GRAN_STORY_ART__', await asset('gran-willow.webp'));
+  code = code.replace('__MAYOR_STORY_ART__', await asset('mayor-bramble.webp'));
+  code = code.replace('__RIVAL_STORY_ART__', await asset('ash-north.webp'));
+  code = code.replace('__COTTAGE_STORY_ART__', await asset('hearth-conversation.webp'));
+  code = code.replace('__VILLAGE_STORY_ART__', await asset('hearth-valley.webp'));
   code = code.replace('__BATTLE_ART__', await asset('forest-clearing.webp'));
   code = code.replace('__OAK_ART__', await asset('forest-oak.webp'));
   code = code.replace('__LEAFOWL_FRONT_ART__', await asset('leafowl-front.webp'));
