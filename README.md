@@ -17,6 +17,16 @@ A cozy creature-bonding and village-building RPG. Explore Emberhollow, meet its 
 
 On phones, play in landscape. Translucent controls overlay the playfield edges, move clear of dialogue, and switch to precise arrows in menus. The fullscreen button appears on supported browsers. The title menu supports mouse, touch, keyboard, and controller. Settings include sound, volume, text speed, journey hints, and reduced motion.
 
+## Bonding and discovery v3
+
+- A dedicated Bond action shows charm stock and the current success chance before an offer. Four woven knots reflect the actual trust beats, with clear welcome and destination feedback.
+- Compact forest-green battle cards and a five-action command ribbon leave more room for the Guardians. Empty charm stock points to Cobb's shop.
+- Aquarabbit joins Embercub and Leafowl with detailed transparent front and back battle poses, using the same frame size and foot baseline.
+- The Guardians screen includes Travelling and At home rosters. Retrieve friends, swap a full team safely, or choose **Travel beside me** to change your walking companion. Tabs and cards support direct taps/clicks; Back returns from home pages to the tabs.
+- Facing a villager or useful object shows its actual interaction. Nearby villagers pause so they are easier to talk to; prompts respect the journey-hints setting.
+- Cobb in Gladewind Meadow now sells Woven Charms (12 coins) and Warm Salves (18 coins), with stock, balance, purchase feedback and saved receipts in the village ledger.
+- The journal shows the current next step and travelling/home counts. Existing saves retain their Guardians and progress.
+
 ## World and player experience v2
 
 - Wider exploration camera with a 960×540 render surface and separate, readable UI coordinates.
@@ -59,7 +69,7 @@ npm run preview
 npm run test:browser
 ```
 
-The suite uses an isolated browser profile and disposable saves. It writes screenshots and results to ignored `artifacts/`. Tests cover the actual battle engine, inputs, UI state, weather and terrain behavior, as well as bundle integrity. Browser checks cover onboarding, movement, menus, battles, save/reload, continuing, mobile controls and portrait guidance. These are Chromium checks; physical iOS/Android and real gamepads still need device testing.
+The suite uses an isolated browser profile and disposable saves. It writes screenshots and results to ignored `artifacts/`. Tests cover the actual battle engine, bonding rewards, roster conservation, shop purchases, inputs, UI state, weather and terrain behavior, as well as bundle integrity. Browser checks cover onboarding, movement, menus, battles, Bond cancellation, home swaps, companion selection, interaction prompts, save/reload, continuing, mobile controls and portrait guidance. These are Chromium checks; physical iOS/Android and real gamepads still need device testing.
 
 ## Artwork
 

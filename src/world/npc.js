@@ -8,6 +8,7 @@ import { UIx, Hooks } from '../core/bridge.js';
 import { S, flag, setFlag, save } from '../state.js';
 import { makeRng } from '../core/rng.js';
 import { Audio } from '../core/audio.js';
+import { Economy } from '../village/economy.js';
 
 const WALK_FRAMES = 14;          // NPCs amble; the player is quicker
 const rng = makeRng(20260730);
@@ -29,6 +30,8 @@ export class Npc {
     this.cool = 40 + Math.floor(rng.float() * 120);
     this.noticed = 0;
     this.talking = false;
+    this.playerNearby = false;
+    this.playerAdjacent = false;
   }
 
   get tile() { return { x: this.x, y: this.y }; }
@@ -53,7 +56,8 @@ export class Npc {
     }
     this.px = this.x * TILE; this.py = this.y * TILE;
     if (this.noticed > 0) this.noticed--;
-    if (this.talking || this.wander <= 0) return;
+    // Give someone standing beside us time to speak before wandering away.
+    if (this.talking || this.playerAdjacent || this.wander <= 0) return;
     if (--this.cool > 0) return;
     this.cool = 70 + Math.floor(rng.float() * 160);
 
@@ -69,10 +73,11 @@ export class Npc {
   }
 
   notice(playerX, playerY) {
-    if (this.noticed > 0) return;
-    if (Math.abs(playerX - this.x) + Math.abs(playerY - this.y) <= 2) {
-      this.noticed = 50;
-    }
+    const distance = Math.abs(playerX - this.x) + Math.abs(playerY - this.y);
+    const nearby = distance <= 2;
+    this.playerAdjacent = distance <= 1;
+    if (nearby && !this.playerNearby) this.noticed = 50;
+    this.playerNearby = nearby;
   }
 
   draw(cam) {
@@ -207,7 +212,37 @@ async function afterTalk(npc) {
       }
     }
   }
+  if (npc.who === 'peddler') await visitCobb();
   try { Hooks.missions.note('talk', { who: npc.who }); } catch {}
+}
+
+// Cobb offers the same supplies and prices as the village market, so an early
+// expedition can restock before the player has built a market of their own.
+const COBB_GOODS = [
+  { id: 'charm', name: 'Woven Charm', coins: 12 },
+  { id: 'salve', name: 'Warm Salve', coins: 18 },
+];
+
+async function visitCobb() {
+  const speaker = nameOf('peddler');
+  while (true) {
+    const choices = COBB_GOODS.map(item =>
+      `${item.name} — ${item.coins} coins  (${S.bag[item.id] || 0} in bag)`);
+    const pick = await UIx.ask(`A little something for the road?\nYou have ${S.coins} coins.`,
+      [...choices, 'Leave the stall'], { speaker });
+    const item = COBB_GOODS[pick];
+    if (!item) return;
+    if (!Economy.spend({ coins: item.coins }, `bought ${item.name} from Cobb`)) {
+      Audio.sfx('deny');
+      await UIx.say(`${item.name} costs ${item.coins} coins. You need ${Math.max(0, item.coins - S.coins)} more.`, { speaker });
+      continue;
+    }
+    S.bag[item.id] = (S.bag[item.id] || 0) + 1;
+    const saved = save();
+    Audio.sfx('chime');
+    await UIx.say(`${item.name}, wrapped and ready. ${S.coins} coins left.`
+      + (saved ? '' : '\nYour purchase could not be saved on this device.'), { speaker });
+  }
 }
 
 export function makeNpcs(map) {

@@ -14,6 +14,8 @@ for (const id of names) {
   code = code.replace('__OAK_ART__', await asset('forest-oak.webp'));
   code = code.replace('__LEAFOWL_FRONT_ART__', await asset('leafowl-front.webp'));
   code = code.replace('__LEAFOWL_BACK_ART__', await asset('leafowl-back.webp'));
+  code = code.replace('__AQUARABBIT_FRONT_ART__', await asset('aquarabbit-front.webp'));
+  code = code.replace('__AQUARABBIT_BACK_ART__', await asset('aquarabbit-back.webp'));
   code = code.replace('__EMBERCUB_FRONT_ART__', await asset('embercub-front.webp'));
   code = code.replace('__EMBERCUB_BACK_ART__', await asset('embercub-back.webp'));
   const deps = {};

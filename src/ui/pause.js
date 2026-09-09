@@ -2,17 +2,16 @@
 import { R, LAYER } from '../core/renderer.js';
 import { Input } from '../core/input.js';
 import { Scenes } from '../core/scene.js';
-import { Atlas } from '../art/atlas.js';
 import { Audio } from '../core/audio.js';
 import { UIx, Hooks } from '../core/bridge.js';
 import { Font } from '../core/font.js';
 import { S, save } from '../state.js';
 import { P, mix } from '../art/palette.js';
-import { clockText } from '../world/daynight.js';
 import { Frame } from './frame.js';
+import { journeyGoal } from './hud.js';
 
 const ITEMS = [
-  { id: 'party', label: 'Guardians', scene: 'party', hint: 'Check health, moves and your team' },
+  { id: 'party', label: 'Guardians', scene: 'party', hint: 'Choose your lead. Visit Guardians at home.' },
   { id: 'village', label: 'Village', scene: 'village', hint: 'Build a home. Help Emberhollow grow.' },
   { id: 'missions', label: 'Family missions', scene: 'missions', hint: 'Small things together earn Hearth' },
   { id: 'dex', label: 'Field journal', scene: 'dex', hint: 'Discover the Guardians of the valley' },
@@ -29,7 +28,7 @@ const fit = (text, width) => {
 };
 
 function pauseScene() {
-  let sel = 0, t = 0, busy = false, notice = '', noticeLife = 0;
+  let sel = 0, busy = false, notice = '', noticeLife = 0;
 
   async function pick() {
     const it = ITEMS[sel];
@@ -53,7 +52,6 @@ function pauseScene() {
   return {
     pausesBelow: true, drawsBelow: true,
     update() {
-      t++;
       if (noticeLife > 0) noticeLife--;
       if (busy || UIx.busy) return;
       if (Input.pressed('b') || Input.pressed('start')) { Audio.sfx('cancel'); Scenes.pop(); return; }
@@ -68,23 +66,20 @@ function pauseScene() {
         Frame.panel(x, y, w, 146, 'dark');
         Frame.write('A MOMENT BY THE HEARTH', x + 10, y + 10, 'dark', { color: P.gold1 });
         Frame.write(fit(S.player.name, w - 20), x + 10, y + 25, 'dark');
-        const place = Hooks.world.currentMap()?.name || 'Emberhollow';
+        const map = Hooks.world.currentMap();
+        const place = map?.name || 'Emberhollow';
         Frame.write(fit(place, w - 20), x + 10, y + 36, 'dark', { color: P.ui1 });
         R.rect(x + 10, y + 49, w - 20, 1, '#50665a');
-        Frame.write(`Day ${S.clock.day}  ·  ${clockText()}`, x + 10, y + 57, 'dark');
-        Frame.write(`Village level ${safeLevel()}`, x + 10, y + 70, 'dark', { color: P.gold1 });
-        Frame.write(fit(`${S.coins} coins  ·  ${S.hearth} Hearth`, w - 20), x + 10, y + 83, 'dark');
-        if (S.party.length) {
-          S.party.slice(0, 6).forEach((g, i) => {
-            const gx = x + 12 + i * 25;
-            const im = Atlas.tryGet(`g.${g.species}.ow`, R.cinematicFx ? Math.floor(t / 24) % 2 : 0);
-            if (im) R.blit(im, gx, y + 97);
-            const f = g.maxhp ? Math.max(0, Math.min(1, g.hp / g.maxhp)) : 0;
-            R.rect(gx, y + 116, 18, 3, '#13251f');
-            R.rect(gx, y + 116, Math.round(18 * f), 3, f > 0.25 ? P.hpGood : P.hpWarn);
-          });
-        } else Frame.write('Gran has a companion for you.', x + 10, y + 104, 'dark', { color: P.ui1 });
-        Frame.write(fit(`${Input.label('move')} move   ${Input.label('run')} run`, w - 20), x + 10, y + 131, 'dark', { color: P.ui1 });
+        const goal = journeyGoal(map);
+        Frame.write('NEXT ON YOUR JOURNEY', x + 10, y + 57, 'dark', { color: P.gold1 });
+        Frame.write(fit(goal.title, w - 20), x + 10, y + 70, 'dark');
+        Font.wrap(goal.hint, w - 20).slice(0, 2).forEach((line, i) =>
+          Frame.write(line, x + 10, y + 82 + i * 10, 'dark', { color: P.ui1 }));
+        const homes = S.village.buildings.filter(b => b.type === 'cottage').length;
+        Frame.write(`Village Lv ${safeLevel()}  ·  ${homes} ${homes === 1 ? 'home' : 'homes'}`, x + 10, y + 108,
+          'dark', { color: P.gold1 });
+        Frame.write(`${S.party.length}/6 travelling  ·  ${S.box.length} at home`, x + 10, y + 120, 'dark');
+        Frame.write(fit(`${S.coins} coins  ·  ${S.hearth} Hearth`, w - 20), x + 10, y + 132, 'dark', { color: P.ui1 });
 
         const mx = 190, mw = R.W - mx - 8;
         Frame.panel(mx, y, mw, 146, 'paper');

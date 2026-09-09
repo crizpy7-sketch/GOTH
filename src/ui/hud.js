@@ -32,6 +32,10 @@ const count = n => n >= 10000 ? `${Math.floor(n / 1000)}k` : String(n);
 // The first steps are always discoverable. A chosen family mission takes over
 // after the companion introduction, so the board stays connected to the world.
 export function journeyGoal(map) {
+  if (!S.party.length && S.box.length) return {
+    title: 'A companion for the road',
+    hint: `${Input.label('start')} > Guardians > At home. Invite a friend.`,
+  };
   if (!S.party.length) return {
     title: 'Meet Gran Willow',
     hint: map?.id === 'granhouse' ? 'Talk to Gran beside the table.'
@@ -48,8 +52,17 @@ export function journeyGoal(map) {
     hint: map?.id === 'village' ? 'Say hello at the village plaza.' : 'Meet the Mayor in Emberhollow.',
     target: map?.npcs?.find(n => n.who === 'mayor'),
   };
-  if (!S.stats.bonded) return { title: 'A new friend in the valley', hint: 'Tall grass hides wild Guardians.' };
-  if (!S.stats.built) return { title: 'Make Emberhollow your own', hint: `${Input.label('start')} > Village to build a home.` };
+  if (!S.stats.bonded && S.party.length + S.box.length < 2) return {
+    title: 'A new friend in the valley',
+    hint: (S.bag.charm || 0) > 0 ? 'Explore tall grass. Offer a charm to bond.'
+      : map?.id === 'meadow' ? 'Cobb sells charms by the meadow path.' : 'Find Cobb in Gladewind Meadow for charms.',
+    target: !(S.bag.charm || 0) ? map?.npcs?.find(n => n.who === 'peddler') : undefined,
+  };
+  if (!S.village.buildings.some(b => b.type === 'cottage')) return {
+    title: 'A first home in Emberhollow',
+    hint: map?.id === 'village' ? `${Input.label('start')} > Village > Build a cottage.`
+      : 'Return to Emberhollow to build a cottage.',
+  };
   return { title: 'Good things, done together', hint: `${Input.label('start')} > Family missions to choose one.` };
 }
 

@@ -12,7 +12,7 @@ import { UIx, Hooks } from '../core/bridge.js';
 import { S, addHearth, save } from '../state.js';
 import { Bus, EV } from '../core/events.js';
 import { Font } from '../core/font.js';
-import { P, TYPE_COLOR, mix, shade } from '../art/palette.js';
+import { P, TYPE_COLOR, mix } from '../art/palette.js';
 import { clamp, ease } from '../core/util.js';
 import {
   newBattle, chooseAction, stepTurn, activeOf, canRun, canBond,
@@ -20,11 +20,12 @@ import {
 } from './engine.js';
 import { makeGuardian, displayName, getSpecies, restEasy, commitEvolve, normalizeGuardian } from './species.js';
 import { getMove, STATUS } from './moves.js';
-import { CHARMS, bondPreview, startingBond } from './capture.js';
+import { BOND_BEATS, bondPreview, startingBond } from './capture.js';
 
-const MENU = ['Fight', 'Guardians', 'Bag', 'Run'];
+const MENU = ['Fight', 'Bond', 'Team', 'Bag', 'Run'];
 const DRAIN = 22;              // frames an HP bar takes to travel its full width
 const TEXT_HOLD = 8;
+const BOND_WAIT = 84;          // the offer and all four trust beats remain visible
 
 const fitText = (value, width) => {
   let s = String(value);
@@ -53,10 +54,15 @@ function navigateGrid(index, count) {
   return next;
 }
 
+export function commandCursor(index, direction) {
+  const step = direction === 'left' || direction === 'up' ? -1 : 1;
+  return (index + MENU.length + step) % MENU.length;
+}
+
 // ---------------------------------------------------------------- battle scene
 function battleScene(params) {
   let B = null;
-  let phase = 'intro';          // intro | menu | moves | bag | anim | over
+  let phase = 'intro';          // intro | menu | moves | bond | bag | anim | over
   let cursor = 0, moveCursor = 0, bagCursor = 0;
   let queue = [];               // pending engine events
   let text = '', textShown = 0, textHold = 0;
@@ -114,6 +120,7 @@ function battleScene(params) {
   function pump() {
     if (textShown < text.length) return;
     if (textHold > 0) { textHold--; return; }
+    if (bonding?.stage === 'waiting' && bonding.t < BOND_WAIT) return;
     if (!queue.length) {
       if (B.over) { finish(); return; }
       if (B.needSwitch) { openForcedSwitch(); return; }
@@ -210,12 +217,15 @@ function battleScene(params) {
         break;
       }
 
-      case 'bond-try': bonding = { t: 0, beats: e.beats ?? 3, ok: false }; Audio.sfx('coin'); textHold = 70; break;
+      case 'bond-try':
+        bonding = { t: 0, beats: e.beats ?? 0, ok: false, stage: 'waiting', charm: e.charm };
+        setText(`${e.name} is considering your offer.`, 0);
+        Audio.sfx('coin');
+        break;
       case 'bond-ok':
-        bonding = bonding || { t: 0, beats: 3 };
-        bonding.ok = true;
+        bonding = { ...bonding, t: 0, beats: BOND_BEATS, ok: true, stage: 'welcome',
+          name: e.name, hearth: e.hearth || 0, destination: S.party.length < 6 ? 'party' : 'box' };
         Audio.sfx('chime');
-        spawnFx('fx.heart', FOE.x + 32, FOE.y + 24);
         if (e.hearth) addHearth(e.hearth);
         S.seen[e.species] = 'bonded';
         if (e.foe) {
@@ -226,15 +236,17 @@ function battleScene(params) {
             bond: startingBond(B.ctx),
           });
           restEasy(guardian, { full: true });
+          shown.foe = presentationOf(guardian);
+          hpTarget.foe = hpFrac(guardian);
           const home = S.party.length < 6 ? S.party : S.box;
           home.push(guardian);
           Bus.emit(EV.GUARDIAN_CAUGHT, { guardian, destination: home === S.party ? 'party' : 'box' });
         }
         save();
-        textHold = 30;
+        setText(`Welcome, ${e.name}!`, 60);
         break;
       case 'bond-fail':
-        bonding = null;
+        bonding = { ...bonding, t: 0, ok: false, stage: 'withdraw' };
         if (e.hearth) addHearth(e.hearth);
         Audio.sfx('cancel'); textHold = 20;
         break;
@@ -298,7 +310,13 @@ function battleScene(params) {
       if (faint[k] >= 0) faint[k]++;
     }
     for (let i = floaters.length - 1; i >= 0; i--) if (++floaters[i].t > 34) floaters.splice(i, 1);
-    if (bonding) bonding.t++;
+    if (bonding) {
+      const before = Math.max(0, Math.floor((bonding.t - 18) / 14));
+      bonding.t += phase === 'anim' && Input.held('a') ? 3 : 1;
+      const after = Math.max(0, Math.floor((bonding.t - 18) / 14));
+      if (bonding.stage === 'waiting' && after > before && after <= bonding.beats) Audio.sfx('cursor');
+      if (bonding.stage === 'withdraw' && bonding.t > 28) bonding = null;
+    }
     if (evolving && ++evolving.t > 96) evolving = null;
 
     // Follow event targets instead of the engine's already-resolved final state.
@@ -323,17 +341,32 @@ function battleScene(params) {
     }
 
     if (phase === 'menu') {
-      cursor = navigateGrid(cursor, MENU.length);
+      const direction = ['up', 'down', 'left', 'right'].find(key => Input.nav(key));
+      if (direction) { cursor = commandCursor(cursor, direction); Audio.sfx('cursor'); }
       if (Input.pressed('a')) {
         Audio.sfx('confirm');
         const pick = MENU[cursor];
         if (pick === 'Fight') { phase = 'moves'; moveCursor = 0; }
-        else if (pick === 'Guardians') openParty();
+        else if (pick === 'Bond') {
+          if (!canBond(B)) { setText('This Guardian already has a home.', 20); phase = 'anim'; }
+          else phase = 'bond';
+        }
+        else if (pick === 'Team') openParty();
         else if (pick === 'Bag') { phase = 'bag'; bagCursor = 0; }
         else if (pick === 'Run') {
           if (!canRun(B)) { setText('There is no running from this one.', 20); phase = 'anim'; }
           else submit({ type: 'run' });
         }
+      }
+      return;
+    }
+
+    if (phase === 'bond') {
+      if (Input.pressed('b')) { phase = 'menu'; Audio.sfx('cancel'); return; }
+      if (Input.pressed('a')) {
+        if ((S.bag.charm || 0) < 1 || !canBond(B) || rosterFull()) { Audio.sfx('deny'); return; }
+        Audio.sfx('confirm');
+        submit({ type: 'bond', charm: 'charm' });
       }
       return;
     }
@@ -365,6 +398,11 @@ function battleScene(params) {
         Audio.sfx('confirm');
         if (it.bond) {
           if (!canBond(B)) { setText('You cannot offer a charm to a friend’s Guardian.', 20); phase = 'anim'; return; }
+          if (rosterFull()) {
+            setText('Your travelling team and home are full. No charm was used.', 28);
+            phase = 'anim';
+            return;
+          }
           submit({ type: 'bond', charm: it.id });
         } else submit({ type: 'item', id: it.id });
       }
@@ -394,10 +432,11 @@ function battleScene(params) {
     R.layer(LAYER.UI, () => {
       drawPanel('foe');
       drawPanel('player');
-      if (phase !== 'moves' && phase !== 'bag') drawTextbox();
+      if (phase !== 'moves' && phase !== 'bag' && phase !== 'bond') drawTextbox();
       if (phase === 'menu') drawMenu();
       else if (phase === 'moves') drawMoves();
       else if (phase === 'bag') drawBag();
+      else if (phase === 'bond') drawBond();
       if (evolving) drawEvolve();
     });
   }
@@ -409,8 +448,9 @@ function battleScene(params) {
       R.rect(0, 0, R.W, 53, 'rgba(13,35,31,0.13)');
       // A few slow motes keep the clearing alive while choosing an action.
       for (let i = 0; i < 7; i++) {
-        const x = (i * 47 + t * 0.08) % R.W;
-        const y = 59 + (i * 13) % 58 + Math.sin(t / 55 + i) * 5;
+        const motion = S.settings?.reducedMotion ? 0 : t;
+        const x = (i * 47 + motion * 0.08) % R.W;
+        const y = 59 + (i * 13) % 58 + Math.sin(motion / 55 + i) * 5;
         R.rect(x, y, 1, 1, 'rgba(255,239,178,0.65)');
       }
       return;
@@ -490,33 +530,29 @@ function battleScene(params) {
     const g = shownGuardian(side);
     if (!g) return;
     const at = side === 'foe' ? FOE : PLR;
-    const bob = Math.sin(t / 26 + (side === 'foe' ? 1 : 0)) * 1.5;
-    const slide = phase === 'intro'
+    const reduced = S.settings?.reducedMotion;
+    const bob = reduced ? 0 : Math.sin(t / 26 + (side === 'foe' ? 1 : 0)) * 1.5;
+    const slide = phase === 'intro' && !reduced
       ? (1 - ease.outCubic(Math.min(1, introT / 34))) * (side === 'foe' ? 90 : -90)
       : 0;
-    const push = nudge[side] > 0 ? Math.sin(nudge[side] / 8 * Math.PI) * (side === 'foe' ? 4 : -4) : 0;
+    const push = nudge[side] > 0 && !reduced ? Math.sin(nudge[side] / 8 * Math.PI) * (side === 'foe' ? 4 : -4) : 0;
     const name = `g.${g.species}.${side === 'foe' ? 'front' : 'back'}`;
     const img = Atlas.tryGet(name);
-    const lunge = Math.sin((1 - attack[side] / 16) * Math.PI) * (side === 'foe' ? -6 : 6);
-    const x = at.x + slide + push + lunge, y = at.y + bob;
+    const lunge = reduced ? 0 : Math.sin((1 - attack[side] / 16) * Math.PI) * (side === 'foe' ? -6 : 6);
+    const welcomeStep = side === 'foe' && bonding?.ok ? (reduced ? 0 : ease.outCubic(Math.min(1, bonding.t / 28)) * -7) : 0;
+    const x = at.x + slide + push + lunge + welcomeStep, y = at.y + bob;
     const fainted = faint[side] >= 0;
     const collapse = fainted ? ease.outCubic(Math.min(1, faint[side] / 20)) : 0;
-    const sink = collapse * 16;
+    const sink = reduced ? 0 : collapse * 16;
 
     const sh = Atlas.tryGet('fx.shadow.big');
     if (sh) R.blit(sh, x, at.y + 54, { alpha: fainted ? 0.15 : 0.42 });
 
     if (!img) { disc(x + 40, y + 55, 16, 19, TYPE_COLOR[g.types[0]] || P.leaf2); return; }
-    if (bonding && side === 'foe') {
-      const k = Math.min(1, bonding.t / 30);
-      if (bonding.ok && bonding.t > 40) return;
-      R.blit(img, x, y + sink, { alpha: 1 - k * 0.75 });
-      return;
-    }
     if (evolving && side === 'player') return;   // the evolution overlay owns the sprite
     const dw = img.logicalWidth || img.width, dh = img.logicalHeight || img.height;
     const dx = Math.round(x), dy = Math.round(y + sink);
-    if (flash[side] > 0 && flash[side] % 4 < 2) {
+    if (!reduced && flash[side] > 0 && flash[side] % 4 < 2) {
       R.blit(img, dx, dy);
       R.silhouette(img, dx, dy, '#fff4d6', 0.8);
     } else R.blit(img, dx, dy, { w: dw, h: dh, alpha: 1 - collapse * 0.8 });
@@ -524,70 +560,108 @@ function battleScene(params) {
 
   function drawFx() {
     for (const f of fx) {
-      const img = Atlas.tryGet(f.name, Math.floor(f.t / 4));
+      const img = Atlas.tryGet(f.name, S.settings?.reducedMotion ? 0 : Math.floor(f.t / 4));
       if (img) R.blit(img, f.x - img.width / 2, f.y - img.height / 2);
     }
     for (const f of floaters) {
-      const lift = ease.outCubic(Math.min(1, f.t / 28)) * 12;
+      const lift = S.settings?.reducedMotion ? 4 : ease.outCubic(Math.min(1, f.t / 28)) * 12;
       R.ctx.save();
       R.ctx.globalAlpha = Math.min(1, (35 - f.t) / 9);
       R.text(f.label, f.x, f.y - lift, { color: f.color, shadow: '#142c28', align: 'center' });
       if (f.detail) R.text(f.detail, f.x, f.y - lift + 10, { color: f.color, shadow: '#142c28', align: 'center' });
       R.ctx.restore();
     }
-    if (bonding) {
-      const k = Math.min(1, bonding.t / 26);
-      const cx = PLR.x + 40 + (FOE.x - PLR.x) * ease.outQuad(k);
-      const cy = PLR.y + 20 - Math.sin(k * Math.PI) * 40 + (FOE.y - PLR.y) * k;
-      const img = Atlas.tryGet('fx.charm', Math.floor(bonding.t / 4));
-      if (img) R.blit(img, cx - img.width / 2, cy - img.height / 2);
-      if (bonding.t > 30) {
-        const beat = Math.floor((bonding.t - 30) / 14);
-        for (let i = 0; i < Math.min(beat, bonding.beats); i++) {
-          const h = Atlas.tryGet('ui.heart');
-          if (h) R.blit(h, FOE.x + 18 + i * 12, FOE.y + 66);
-        }
-      }
-    }
+    if (bonding) drawOffer();
   }
 
   function drawPanel(side) {
     const g = shownGuardian(side);
     if (!g) return;
     const foe = side === 'foe';
-    const w = foe ? 128 : 132;
-    const h = foe ? 37 : 47;
+    const w = 118;
+    const h = 33;
     const x = foe ? R.W - w - 8 : 8;
     const y = 7;
-    const style = UIx.panel(x, y, w, h, 'dark') || { ink: P.ui0, sub: P.ui1, shadow: P.black };
+    const style = hearthPanel(x, y, w, h);
 
-    R.text(fitText(displayName(g), w - 47), x + 7, y + 5, { color: style.ink, shadow: style.shadow });
-    R.text(`${g.lvl}`, x + w - 8, y + 5, { color: style.ink, shadow: style.shadow, align: 'right' });
-    R.text('Lv', x + w - 19, y + 5, { color: style.sub, shadow: style.shadow, align: 'right' });
+    R.text(fitText(displayName(g), w - 40), x + 7, y + 4, { color: style.ink, shadow: style.shadow });
+    R.text(`Lv ${g.lvl}`, x + w - 7, y + 4, { color: style.sub, shadow: style.shadow, align: 'right' });
 
-    // Type badges carry their name — an unlabelled colour block tells the player nothing.
-    g.types.forEach((ty, i) => {
-      const bx = x + 7 + i * 25, by = y + 16;
-      const b = Atlas.tryGet(`ui.type.${ty}`);
-      if (b) R.blit(b, bx, by);
-      else R.rect(bx, by, 22, 9, TYPE_COLOR[ty] || P.ui2);
-      R.text(ty.slice(0, 3).toUpperCase(), bx + 11, by + 1,
-        { color: '#fffaf0', shadow: shade(TYPE_COLOR[ty] || P.ui2, -0.55), align: 'center' });
-    });
-
+    const type = g.types.map(ty => ty.toUpperCase()).join('/');
     if (g.status && STATUS[g.status]) {
       const st = STATUS[g.status];
-      R.text(st.name.toUpperCase(), x + w - 8, y + 17,
-        { color: st.color, shadow: style.shadow, align: 'right' });
-    }
-    R.text('HP', x + 7, y + 27, { color: style.sub, shadow: style.shadow });
-    hpBar(x + 24, y + 28, w - 32, shownHp[side], hpTarget[side]);
+      R.text(st.name.toUpperCase(), x + 7, y + 23, { color: st.color, shadow: style.shadow });
+    } else R.text(fitText(type, foe ? w - 14 : 49), x + 7, y + 23,
+      { color: mix(TYPE_COLOR[g.types[0]] || P.ui1, '#f6edd3', 0.45), shadow: style.shadow });
+    const health = `${Math.max(0, Math.ceil(shownHp[side] * g.maxhp))}/${g.maxhp}`;
+    hpBar(x + 8, y + 16, Math.min(62, w - 22 - Font.measure(health)), shownHp[side], hpTarget[side]);
+    R.text(health,
+      x + w - 7, y + 13, { color: style.ink, shadow: style.shadow, align: 'right' });
     if (!foe) {
-      R.text(`${Math.max(0, Math.ceil(shownHp.player * g.maxhp))}/${g.maxhp}`,
-        x + w - 8, y + 36, { color: style.ink, shadow: style.shadow, align: 'right' });
-      R.text('XP', x + 7, y + 37, { color: style.sub, shadow: style.shadow });
-      xpBar(x + 24, y + 39, w - 73, shownXp.v);
+      R.text('XP', x + 61, y + 23, { color: style.sub, shadow: style.shadow });
+      xpBar(x + 77, y + 26, w - 85, shownXp.v);
     }
+  }
+
+  function hearthPanel(x, y, w, h) {
+    R.rect(x, y, w, h, 'rgba(13,29,26,0.96)');
+    R.stroke(x, y, w, h, '#897047');
+    R.rect(x + 2, y + 2, w - 4, 1, '#395046');
+    R.rect(x + 2, y + h - 3, w - 4, 1, '#203a31');
+    for (const cx of [x + 2, x + w - 4]) R.rect(cx, y + 2, 2, 2, '#d9b77a');
+    return { ink: '#f8eed3', sub: '#b9c6ad', shadow: '#091710' };
+  }
+
+  function drawOffer() {
+    // The woven charm is held between the companions. No projectile, container,
+    // or disappearing Guardian: the thread reaches out only as trust is earned.
+    const reduced = S.settings?.reducedMotion;
+    const withdrawing = bonding.stage === 'withdraw';
+    const ready = bonding.stage === 'waiting'
+      ? Math.min(bonding.beats, Math.max(0, Math.floor((bonding.t - 18) / 14)))
+      : bonding.ok ? BOND_BEATS : bonding.beats;
+    const alpha = withdrawing ? Math.max(0, 1 - bonding.t / 28) : Math.min(1, (bonding.t + 5) / 15);
+    const cx = 156, cy = 91 + (reduced ? 0 : Math.sin(t / 22) * 1.3);
+    const gold = bonding.ok ? '#c9f2b0' : '#efcb83';
+    R.ctx.save();
+    R.ctx.globalAlpha = alpha;
+    R.glow(cx, cy, 24, '#ffd990', reduced ? 0.12 : 0.12 + Math.sin(t / 9) * 0.025);
+    // Cedar loop, crossing red and gold fibres, and two loose tails.
+    const loop = [[-3,-6],[0,-7],[3,-6],[5,-3],[6,0],[5,3],[3,6],[0,7],[-3,6],[-5,3],[-6,0],[-5,-3]];
+    for (const [dx, dy] of loop) {
+      R.rect(cx + dx, cy + dy, 2, 2, '#68462d');
+      R.rect(cx + dx, cy + dy, 1, 1, gold);
+    }
+    for (let k = -4; k <= 4; k++) {
+      R.rect(cx + k, cy + k / 2, 1, 1, '#e29378');
+      R.rect(cx + k, cy - k / 2, 1, 1, gold);
+    }
+    R.rect(cx - 1, cy + 6, 2, 8, '#ad4c3f');
+    R.rect(cx + 2, cy + 7, 1, 6, '#e4b06b');
+    // Four knots illuminate with the engine's actual successful heartbeats.
+    for (let i = 0; i < BOND_BEATS; i++) {
+      const x = cx - 18 + i * 12, y = 112;
+      R.stroke(x, y, 7, 7, '#b99b64');
+      R.rect(x + 2, y + 2, 3, 3, i < ready ? gold : '#283b30');
+    }
+    if (ready > 0) {
+      const progress = ready / BOND_BEATS;
+      for (let i = 0; i < Math.floor(progress * 37); i++) {
+        const x = cx + 9 + i, y = cy + Math.sin(i / 12) * 6;
+        if (i % 3 !== 2) R.rect(x, y, 1, 1, gold);
+      }
+    }
+    if (bonding.ok) {
+      const hx = FOE.x + 32, hy = FOE.y + 6;
+      R.rect(hx + 1, hy, 2, 1, '#f4a7ad');
+      R.rect(hx + 4, hy, 2, 1, '#f4a7ad');
+      R.rect(hx, hy + 1, 7, 2, '#ee8296');
+      R.rect(hx + 1, hy + 3, 5, 1, '#ee8296');
+      R.rect(hx + 2, hy + 4, 3, 1, '#ce617b');
+      R.rect(hx + 3, hy + 5, 1, 1, '#ce617b');
+      R.rect(hx + 1, hy + 1, 1, 1, '#ffe9d6');
+    }
+    R.ctx.restore();
   }
 
   function hpBar(x, y, w, frac, target = frac) {
@@ -608,9 +682,28 @@ function battleScene(params) {
 
   function drawTextbox() {
     const h = 44;
-    const menuW = phase === 'menu' ? 150 : 0;
-    const w = menuW ? R.W - menuW - 14 : R.W - 12;
-    const style = UIx.panel(6, R.H - h - 4, w, h, 'dark') || { ink: P.ui0, shadow: P.black };
+    const w = R.W - 12, y = R.H - h - 4;
+    const style = hearthPanel(6, y, w, h);
+    if (bonding?.ok) {
+      R.text(fitText(`Welcome, ${bonding.name}!`, w - 98), 15, y + 7, { color: '#e8ce91', shadow: style.shadow });
+      R.text(`+${bonding.hearth} Hearth`, R.W - 15, y + 7,
+        { color: '#c9f2b0', shadow: style.shadow, align: 'right' });
+      const destination = bonding.destination === 'party'
+        ? 'Your new friend is travelling with your team.'
+        : 'Waiting at home: Menu > Guardians > At home.';
+      Font.wrap(destination, w - 20).slice(0, 2).forEach((line, i) =>
+        R.text(line, 15, y + 21 + i * 10, { color: style.ink, shadow: style.shadow }));
+      return;
+    }
+    if (phase === 'menu') {
+      const help = cursor === 1 ? ((S.bag.charm || 0) > 0
+        ? 'Offer a woven charm. A bond begins with trust.' : 'You need a Woven Charm to offer a bond.')
+        : cursor === 2 ? 'Choose a travelling Guardian.'
+        : cursor === 3 ? 'Use supplies from your bag.'
+        : cursor === 4 ? 'Step away from this encounter.' : `What will ${displayName(shown.player)} do?`;
+      R.text(fitText(help, w - 18), 15, y + 7, { color: style.ink, shadow: style.shadow });
+      return;
+    }
     const lines = Font.wrap(text, w - 20);
     let n = textShown;
     lines.slice(0, 3).forEach((l, i) => {
@@ -621,25 +714,42 @@ function battleScene(params) {
   }
 
   function drawMenu() {
-    const w = 150, h = 44, x = R.W - w - 6, y = R.H - h - 4;
-    const style = UIx.panel(x, y, w, h, 'dark') || { ink: P.ui0, sub: P.ui1, shadow: P.black };
     MENU.forEach((m, i) => {
-      const mx = x + 14 + (i % 2) * 72, my = y + 8 + Math.floor(i / 2) * 16;
+      const mx = 12 + i * 60, my = 154;
       const on = i === cursor;
-      if (on) {
-        R.rect(mx - 4, my - 2, 64, 13, '#8a5d25');
-        const c = Atlas.tryGet('ui.cursor');
-        if (c) R.blit(c, mx - 11, my + Math.sin(t / 8) * 0.5);
-        else R.text('▶', mx - 11, my, { color: P.gold3, shadow: false });
-      }
-      R.text(m, mx, my, { color: on ? '#fff3ce' : style.ink, shadow: style.shadow });
+      R.rect(mx, my, 56, 17, on ? '#d9b575' : '#233c31');
+      R.stroke(mx, my, 56, 17, on ? '#ffe1a0' : '#55735b');
+      if (on) R.rect(mx + 7, my + 14, 42, 1, '#987038');
+      const disabled = m === 'Bond' && !canBond(B) || m === 'Run' && !canRun(B);
+      R.text(m, mx + 28, my + 4,
+        { color: on ? '#243327' : disabled ? '#87927d' : '#eee5c9', shadow: on ? false : '#0b2018', align: 'center' });
     });
+  }
+
+  function drawBond() {
+    const x = 6, y = 122, w = R.W - 12, h = 54;
+    const style = hearthPanel(x, y, w, h);
+    const pv = safeBondPreview();
+    const count = S.bag.charm || 0;
+    const full = rosterFull();
+    R.text(`WOVEN CHARM  x${count}`, x + 10, y + 7, { color: '#e8ce91', shadow: style.shadow });
+    R.text(full ? 'Roster full' : pv ? `${pv.percent}% chance` : 'Wild Guardians only', x + w - 10, y + 7,
+      { color: full ? '#e8ce91' : '#c9f2b0', shadow: style.shadow, align: 'right' });
+    const help = full ? 'Your travelling team and home are both full.'
+      : count > 0 ? pv?.read || 'Offer a charm and let the Guardian decide.'
+      : 'Buy more from Cobb in the meadow.';
+    R.text(help, x + 10, y + 21, { color: style.ink, shadow: style.shadow });
+    R.rect(x + 8, y + 34, w - 16, 1, '#45604b');
+    R.text(full ? 'Your charm will be kept.' : count > 0 ? `${Input.label('a')} Offer charm` : 'No Woven Charms left', x + 10, y + 40,
+      { color: count > 0 && !full ? '#e8ce91' : '#cba38c', shadow: style.shadow });
+    R.text(`${Input.label('b')} Back`, x + w - 10, y + 40,
+      { color: style.sub, shadow: style.shadow, align: 'right' });
   }
 
   function drawMoves() {
     const g = activeOf(B, 'player');
     const w = R.W - 12, h = 54, x = 6, y = R.H - h - 4;
-    const style = UIx.panel(x, y, w, h, 'dark') || { ink: P.ui0, sub: P.ui1, shadow: P.black };
+    const style = hearthPanel(x, y, w, h);
     const exhausted = !hasFocus(g);
     const slots = exhausted ? [{ id: 'struggle', focus: 1, maxFocus: 1 }] : g.moves;
     const slot0 = slots[moveCursor];
@@ -673,15 +783,16 @@ function battleScene(params) {
   function drawBag() {
     const items = bagItems();
     const w = 150, h = 54, x = R.W - w - 6, y = R.H - h - 4;
-    const style = UIx.panel(x, y, w, h, 'dark') || { ink: P.ui0, sub: P.ui1, shadow: P.black };
-    UIx.panel(6, y, R.W - w - 14, h, 'dark');
+    const style = hearthPanel(x, y, w, h);
+    hearthPanel(6, y, R.W - w - 14, h);
     const selected = items[bagCursor];
-    let help = selected?.bond ? 'Invite this Guardian to join your journey.'
+    let help = selected?.bond ? (rosterFull() ? 'Your team and home are full. No charm will be spent.'
+      : 'Invite this Guardian to join your journey.')
       : selected?.id === 'salve' ? 'Restores up to 24 HP to your Guardian.' : 'Restores 2 focus to every move.';
     Font.wrap(help, 134).slice(0, 3).forEach((line, i) =>
       R.text(line, 14, y + 7 + i * 10, { color: style.ink, shadow: style.shadow }));
-    const pv = selected?.bond && canBond(B) ? safeBondPreview() : null;
-    R.text(pv ? `Bond chance ${Math.round(pv * 100)}%` : `${Input.label('b')} back`, 14, y + 42,
+    const pv = selected?.bond && canBond(B) && !rosterFull() ? safeBondPreview() : null;
+    R.text(pv ? `Bond chance ${pv.percent}%` : `${Input.label('b')} back`, 14, y + 42,
       { color: pv ? '#c1eda5' : style.sub, shadow: style.shadow });
     items.slice(0, 3).forEach((it, i) => {
       const my = y + 8 + i * 14;
@@ -698,21 +809,27 @@ function battleScene(params) {
 
   function drawEvolve() {
     const k = Math.min(1, evolving.t / 90);
+    const reduced = S.settings?.reducedMotion;
     R.rect(0, 0, R.W, R.H, `rgba(12,10,18,${0.55 * k})`);
     const from = Atlas.tryGet(`g.${evolving.from}.front`);
     const to = Atlas.tryGet(`g.${evolving.to}.front`);
     const cx = R.W / 2 - 32, cy = 40;
     const flicker = evolving.t % 8 < 4;
-    const img = k < 0.75 ? (flicker ? from : to) : to;
+    const img = reduced ? to : k < 0.75 ? (flicker ? from : to) : to;
     if (img) {
-      if (k < 0.85) R.silhouette(img, cx, cy, '#ffffff', 0.95);
+      if (!reduced && k < 0.85) R.silhouette(img, cx, cy, '#ffffff', 0.95);
       else R.blit(img, cx, cy);
     }
     const g = Atlas.tryGet('fx.evolve', Math.floor(evolving.t / 6) % 6);
-    if (g) R.blit(g, cx + 20, cy + 20);
+    if (g && !reduced) R.blit(g, cx + 20, cy + 20);
   }
 
   // --- helpers ---------------------------------------------------------------
+  function rosterFull() {
+    // Save normalization retains at most 200 Guardians at home. Check before
+    // offering, so neither a new friend nor the player's charm can be lost.
+    return S.party.length >= 6 && S.box.length >= 200;
+  }
   function bagItems() {
     return [
       { id: 'charm', name: 'Woven Charm', n: S.bag.charm || 0, bond: true },
@@ -736,7 +853,7 @@ function battleScene(params) {
       return bondPreview(activeOf(B, 'foe'), {
         charm: 'charm', villageLevel: safeLevel(), streak: S.missions?.streak || 0,
         playerLevel: activeOf(B, 'player')?.lvl,
-      })?.p ?? null;
+      }) ?? null;
     } catch { return null; }
   }
 

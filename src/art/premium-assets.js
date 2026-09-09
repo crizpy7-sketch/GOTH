@@ -7,6 +7,8 @@ export function register() {
   Atlas.defineSheet('t.tree.oak', 48, 64, 1, '__OAK_ART__', {frameW:144,frameH:192,pixelRatio:3,premium:true});
   Atlas.defineSheet('g.leafowl.front', 80, 80, 1, '__LEAFOWL_FRONT_ART__', {frameW:160,frameH:160,pixelRatio:2,premium:true});
   Atlas.defineSheet('g.leafowl.back', 80, 80, 1, '__LEAFOWL_BACK_ART__', {frameW:160,frameH:160,pixelRatio:2,premium:true});
+  Atlas.defineSheet('g.aquarabbit.front', 80, 80, 1, '__AQUARABBIT_FRONT_ART__', {frameW:160,frameH:160,pixelRatio:2,premium:true});
+  Atlas.defineSheet('g.aquarabbit.back', 80, 80, 1, '__AQUARABBIT_BACK_ART__', {frameW:160,frameH:160,pixelRatio:2,premium:true});
   Atlas.defineSheet('scene.battle', 320, 180, 1, '__BATTLE_ART__', { frameW:640, frameH:360, pixelRatio:2, premium:true });
   Atlas.defineSheet('g.embercub.front', 80, 80, 1, '__EMBERCUB_FRONT_ART__', {frameW:160,frameH:160,pixelRatio:2,premium:true});
   Atlas.defineSheet('g.embercub.back', 80, 80, 1, '__EMBERCUB_BACK_ART__', {frameW:160,frameH:160,pixelRatio:2,premium:true});
