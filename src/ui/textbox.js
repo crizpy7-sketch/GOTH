@@ -38,7 +38,8 @@ function portrait(who, x, y) {
   ctx.clip();
   // 16x24 sprite, head is roughly the top 14px; scale x2 and centre on the face.
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(img, 1, 1, 14, 14, x + 3, y + 3, 28, 28);
+  const ratio = img.pixelRatio || 1;
+  ctx.drawImage(img, ratio, ratio, 14 * ratio, 14 * ratio, x + 3, y + 3, 28, 28);
   ctx.restore();
   return true;
 }

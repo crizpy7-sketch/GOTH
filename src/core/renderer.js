@@ -1,4 +1,4 @@
-// Layered pixel renderer. 320x180 internal, contained inside the visual viewport.
+// 320x180 logical UI, with a 960x540 backing store for detailed world artwork.
 //
 // Layers: 0 ground, 1 mid (decor under the player), 2 entity (y-sorted),
 //         3 over (tree canopies, roofs, anything that occludes the player),
@@ -21,8 +21,26 @@ let layoutObserver = null, resizeFrame = 0;
 let settleTimers = [];
 let shakeFrames = 0, shakeMag = 0, shakeX = 0, shakeY = 0;
 let flashFrames = 0, flashTotal = 0, flashColor = '#fff';
-let scratch = null, scratchCtx = null;
 let cinematicFx = true;
+const silhouettes = new WeakMap();
+let atmosphere = null;
+
+function atmosphereLayer() {
+  if (atmosphere) return atmosphere;
+  atmosphere = document.createElement('canvas');
+  atmosphere.width = 640; atmosphere.height = 360;
+  const c = atmosphere.getContext('2d'); c.scale(2, 2);
+  const shade = c.createRadialGradient(160, 80, 45, 160, 90, 190);
+  shade.addColorStop(0, 'rgba(13,27,24,0)');
+  shade.addColorStop(.65, 'rgba(13,27,24,0.025)');
+  shade.addColorStop(1, 'rgba(13,27,24,0.25)');
+  c.fillStyle = shade; c.fillRect(0, 0, 320, 180);
+  const light = c.createRadialGradient(145, 24, 0, 145, 24, 150);
+  light.addColorStop(0, 'rgba(255,224,168,0.04)');
+  light.addColorStop(1, 'rgba(255,224,168,0)');
+  c.fillStyle = light; c.fillRect(0, 0, 320, 180);
+  return atmosphere;
+}
 
 const cssNumber = value => Number.parseFloat(value) || 0;
 
@@ -57,6 +75,10 @@ function settleViewport() {
 
 export const R = {
   W: 320, H: 180,
+  resolution: 3,
+  worldZoom: 1,
+  get viewW() { return this.W / this.worldZoom; },
+  get viewH() { return this.H / this.worldZoom; },
   camera: { x: 0, y: 0 },
   get ctx() { return ctx; },
   get canvas() { return canvas; },
@@ -70,13 +92,9 @@ export const R = {
     playfieldEl = document.getElementById('playfield');
     stageEl = document.getElementById('stage') || canvas.parentElement;
     rotateGateEl = document.getElementById('rotateGate');
-    canvas.width = this.W; canvas.height = this.H;
+    canvas.width = this.W * this.resolution; canvas.height = this.H * this.resolution;
     ctx = canvas.getContext('2d', { alpha: false });
     ctx.imageSmoothingEnabled = false;
-    scratch = document.createElement('canvas');
-    scratch.width = this.W; scratch.height = this.H;
-    scratchCtx = scratch.getContext('2d');
-    scratchCtx.imageSmoothingEnabled = false;
     this.resize();
     addEventListener('resize', scheduleResize, { passive: true });
     addEventListener('orientationchange', settleViewport, { passive: true });
@@ -122,9 +140,7 @@ export const R = {
         + cssNumber(stageStyle?.borderTopWidth) + cssNumber(stageStyle?.borderBottomWidth),
     };
 
-    const touchRails = document.body.classList.contains('touch')
-      && !document.body.classList.contains('title-active') && view.width > view.height;
-    const rail = touchRails ? Math.min(96, view.width * 0.14) : 0;
+    const rail = 0;
     rootStyle.setProperty('--control-rail', `${rail}px`);
     const availableWidth = Math.max(0, view.width - safe.left - safe.right - chrome.x - rail * 2);
     const availableHeight = Math.max(0, view.height - safe.top - safe.bottom - chrome.y);
@@ -162,6 +178,7 @@ export const R = {
 
   // ---- frame lifecycle (main.js owns these) ----
   begin() {
+    this.worldZoom = 1;
     for (let i = 0; i < N_LAYERS; i++) layers[i].length = 0;
     entities.length = 0;
     if (shakeFrames > 0) {
@@ -173,8 +190,10 @@ export const R = {
   },
 
   flush() {
+    ctx.setTransform(this.resolution, 0, 0, this.resolution, 0, 0);
     ctx.save();
     if (shakeX || shakeY) ctx.translate(shakeX, shakeY);
+    ctx.scale(this.worldZoom, this.worldZoom);
     for (let i = 0; i < LAYER.UI; i++) {
       if (i === LAYER.ENTITY && entities.length) {
         entities.sort((a, b) => a.y - b.y || a.seq - b.seq);
@@ -196,23 +215,9 @@ export const R = {
     // touching gameplay: a restrained vignette and warm bloom. The UI is rendered
     // afterwards so its text and health bars retain their intended contrast.
     if (cinematicFx) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'multiply';
-      const vg = ctx.createRadialGradient(this.W / 2, this.H * 0.44, 42,
-        this.W / 2, this.H / 2, 205);
-      vg.addColorStop(0, 'rgba(255,255,255,1)');
-      vg.addColorStop(0.68, 'rgba(255,255,255,0.99)');
-      vg.addColorStop(1, 'rgba(34,24,42,0.78)');
-      ctx.fillStyle = vg;
-      ctx.fillRect(0, 0, this.W, this.H);
-      ctx.globalCompositeOperation = 'screen';
-      const bloom = ctx.createRadialGradient(this.W / 2, this.H * 0.18, 0,
-        this.W / 2, this.H * 0.18, 150);
-      bloom.addColorStop(0, 'rgba(255,224,168,0.045)');
-      bloom.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = bloom;
-      ctx.fillRect(0, 0, this.W, this.H);
-      ctx.restore();
+      // Static atmospheric gradients are baked once instead of recompositing
+      // multiple full-resolution multiply/screen passes every animation frame.
+      ctx.drawImage(atmosphereLayer(), 0, 0, this.W, this.H);
     }
     // Text and health bars remain unshaken and outside the world color grade.
     for (const draw of layers[LAYER.UI]) draw(ctx);
@@ -230,23 +235,25 @@ export const R = {
   blit(img, x, y, o) {
     if (!img) return;
     const dx = Math.round(x), dy = Math.round(y);
-    if (!o) { ctx.drawImage(img, dx, dy); return; }
+    const iw = img.logicalWidth || img.width, ih = img.logicalHeight || img.height;
+    const ratio = img.pixelRatio || 1;
+    if (!o) { ctx.drawImage(img, dx, dy, iw, ih); return; }
     const a = o.alpha;
     if (a !== undefined && a <= 0) return;
     if (a !== undefined && a < 1) ctx.globalAlpha = a;
     if (o.flipX) {
       ctx.save();
-      ctx.translate(dx + img.width, dy);
+      ctx.translate(dx + (o.w || iw), dy);
       ctx.scale(-1, 1);
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, o.w || iw, o.h || ih);
       ctx.restore();
     } else if (o.clip) {
       const c = o.clip;
-      ctx.drawImage(img, c.x, c.y, c.w, c.h, dx, dy, c.w, c.h);
+      ctx.drawImage(img, c.x * ratio, c.y * ratio, c.w * ratio, c.h * ratio, dx, dy, c.w, c.h);
     } else if (o.w || o.h) {
-      ctx.drawImage(img, dx, dy, o.w || img.width, o.h || img.height);
+      ctx.drawImage(img, dx, dy, o.w || iw, o.h || ih);
     } else {
-      ctx.drawImage(img, dx, dy);
+      ctx.drawImage(img, dx, dy, iw, ih);
     }
     if (a !== undefined && a < 1) ctx.globalAlpha = 1;
   },
@@ -254,14 +261,19 @@ export const R = {
   // Silhouette blit: draws `img` as a flat colour. Used for hit flashes and shadows.
   silhouette(img, x, y, color, alpha = 1) {
     if (!img) return;
-    scratchCtx.clearRect(0, 0, img.width, img.height);
-    scratchCtx.drawImage(img, 0, 0);
-    scratchCtx.globalCompositeOperation = 'source-in';
-    scratchCtx.fillStyle = color;
-    scratchCtx.fillRect(0, 0, img.width, img.height);
-    scratchCtx.globalCompositeOperation = 'source-over';
+    let colors = silhouettes.get(img);
+    if (!colors) { colors = new Map(); silhouettes.set(img, colors); }
+    let tinted = colors.get(color);
+    if (!tinted) {
+      tinted = document.createElement('canvas');
+      tinted.width = img.width; tinted.height = img.height;
+      const c = tinted.getContext('2d');
+      c.drawImage(img, 0, 0); c.globalCompositeOperation = 'source-in';
+      c.fillStyle = color; c.fillRect(0, 0, img.width, img.height);
+      colors.set(color, tinted);
+    }
     ctx.globalAlpha = alpha;
-    ctx.drawImage(scratch, 0, 0, img.width, img.height, Math.round(x), Math.round(y), img.width, img.height);
+    ctx.drawImage(tinted, Math.round(x), Math.round(y), img.logicalWidth || img.width, img.logicalHeight || img.height);
     ctx.globalAlpha = 1;
   },
 
@@ -283,10 +295,11 @@ export const R = {
     return [Math.round(wx - this.camera.x), Math.round(wy - this.camera.y)];
   },
   centerOn(wx, wy, bounds) {
-    let cx = wx - this.W / 2, cy = wy - this.H / 2;
+    const vw = this.viewW, vh = this.viewH;
+    let cx = wx - vw / 2, cy = wy - vh / 2;
     if (bounds) {
-      cx = bounds.w * 16 <= this.W ? (bounds.w * 16 - this.W) / 2 : clamp(cx, 0, bounds.w * 16 - this.W);
-      cy = bounds.h * 16 <= this.H ? (bounds.h * 16 - this.H) / 2 : clamp(cy, 0, bounds.h * 16 - this.H);
+      cx = bounds.w * 16 <= vw ? (bounds.w * 16 - vw) / 2 : clamp(cx, 0, bounds.w * 16 - vw);
+      cy = bounds.h * 16 <= vh ? (bounds.h * 16 - vh) / 2 : clamp(cy, 0, bounds.h * 16 - vh);
     }
     this.camera.x = cx; this.camera.y = cy;
   },
@@ -300,7 +313,7 @@ export const R = {
     ctx.globalCompositeOperation = mode;
     ctx.globalAlpha = alpha;
     ctx.fillStyle = color;
-    ctx.fillRect(0, 0, this.W, this.H);
+    ctx.fillRect(0, 0, this.viewW, this.viewH);
     ctx.restore();
   },
   // Additive glow patch — used for lanterns and windows at night.

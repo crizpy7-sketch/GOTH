@@ -36,9 +36,9 @@ const SKIN = {
 // hair / clothing choices are deliberately far apart in hue so a crowd reads.
 const LOOKS = {
   hero: {
-    skin: 'warm', hair: ['#c07a3f', '#8e5325'], hairStyle: 'short',
-    top: ['#d07755', '#984936'], bottom: ['#4a5f8c', '#31416b'], shoe: ['#8e6034', '#5b3d21'],
-    accent: '#e9c580', scarf: true, pack: ['#b58e58', '#775739'],
+    skin: 'warm', hair: ['#986439', '#573820'], hairStyle: 'short',
+    top: ['#bc6945', '#794633'], bottom: ['#466675', '#2e454d'], shoe: ['#8e6034', '#5b3d21'],
+    accent: '#e2c58a', scarf: true, pack: ['#ad8851', '#715332'],
   },
   mayor: {
     skin: 'fair', hair: ['#d8d2c4', '#a49d8d'], hairStyle: 'bald',
@@ -113,11 +113,50 @@ function charPainter(look) {
     const pose = frame === 1 ? 1 : frame === 3 ? -1 : 0;
     const dir = look.__dir;
     const flip = dir === 'right';
+    ctx.save();
+    ctx.scale(w / 16, h / 24);
     if (flip) { ctx.save(); ctx.translate(16, 0); ctx.scale(-1, 1); }
     drawCharacter(ctx, look, flip ? 'left' : dir, pose);
+    characterDetails(ctx, look, flip ? 'left' : dir, pose);
     if (flip) ctx.restore();
-    autoOutline(ctx, 16, 24, 0.46, 0.26);
+    ctx.restore();
+    autoOutline(ctx, w, h, 0.46, 0.26);
   };
+}
+
+// The sprite remains 16x24 in the world. Half-pixel stitches, locks of hair and
+// leather highlights use the denser atlas without changing anybody's scale.
+function characterDetails(ctx, L, dir, pose) {
+  const put = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
+  const m = metrics(L.child), bob = pose !== 0 ? -1 : 0, hy = m.hy + bob;
+  const side = dir === 'left', back = dir === 'up';
+  if (!L.hat && L.hairStyle !== 'bald') {
+    const strands = back ? [[4.5, 2, 2], [7, 1, 2], [9.5, 3, 1.5]] : [[4, 1, 2.5], [7, 0.5, 2], [10, 1.5, 1]];
+    for (const [x, y, width] of strands) put(x, hy + y, width, 0.5, mix(L.hair[0], '#e4c188', 0.34));
+    if (!back && L.hairStyle === 'short') {
+      put(6, hy + 3.5, 1.5, 1, L.hair[1]);
+      put(9, hy + 3, 1.5, 1.5, L.hair[0]);
+    }
+  }
+  if (!back) {
+    const eyeY = hy + Math.round(m.hh * 0.52);
+    for (const x of side ? [4] : [4, 10]) {
+      put(x, eyeY, 2, 0.5, mix(L.hair[1], '#271e21', 0.5));
+      put(x, eyeY + 0.5, 0.5, 0.5, '#fff0d7');
+    }
+    put(side ? 6.5 : 7.5, eyeY + 2.5, 1, 0.5, mix(SKIN[L.skin][0], '#fff0d8', 0.4));
+  }
+  const ty = m.ty + bob;
+  if (L.pack && back) {
+    put(5.5, ty + 1.5, 4, 0.5, '#d9b574');
+    put(6, ty + 3.5, 0.5, 2.5, '#765534');
+    put(9, ty + 3.5, 0.5, 2.5, '#765534');
+    put(7, ty + 3, 2, 1.5, '#644b31');
+    put(7.5, ty + 3, 1, 0.5, '#e4c47c');
+  } else if (!back && !L.apron && !L.shawl) {
+    put(side ? 7 : 8, ty + 2, 0.5, 2, mix(L.top[1], '#302b2c', 0.25));
+    put(side ? 5 : 5, ty + 3.5, 1.5, 0.5, mix(L.top[0], '#f4d5a4', 0.24));
+  }
 }
 
 function drawCharacter(ctx, L, dir, pose) {
@@ -624,6 +663,8 @@ function house(ctx, W, H, cfg) {
   const t = cfg.tier;
   const overhangPx = cfg.overhang * 16;
   const roofH = overhangPx + (cfg.roofExtra ?? 8);
+  const roofRise = Math.min(25, roofH);
+  const roofY = roofH - roofRise;
   const wallTop = Math.max(0, roofH - 4);
   const wallH = H - wallTop;
   const baseH = t >= 2 ? 4 : 3;
@@ -634,19 +675,21 @@ function house(ctx, W, H, cfg) {
   stoneBase(ctx, 1, H - baseH, W - 2, baseH);
 
   // roof
-  const rows = shingleRoof(ctx, W, roofH, t === 1 ? ramp.map(c => mix(c, P.rock2, 0.16)) : ramp, {
+  ctx.save(); ctx.translate(0, roofY);
+  const rows = shingleRoof(ctx, W, roofRise, t === 1 ? ramp.map(c => mix(c, P.rock2, 0.16)) : ramp, {
     ridge: t >= 3 ? P.gold2 : null,
     scallop: t >= 3,
   });
+  ctx.restore();
   // eaves shadow on the wall
-  const [ex0, ex1] = rows[roofH - 1];
+  const [ex0, ex1] = rows[roofRise - 1];
   ctx.globalAlpha = 0.30;
   px(ctx, Math.max(1, ex0), roofH, '#241a2e', Math.min(W - 2, ex1 - ex0 + 1), 2);
   ctx.globalAlpha = 1;
 
   // gable emblem
   if (t >= 2 && cfg.emblem && roofH > 14) {
-    EMBLEM[cfg.emblem](ctx, W >> 1, Math.round(roofH * 0.45));
+    EMBLEM[cfg.emblem](ctx, W >> 1, roofY + Math.round(roofRise * 0.45));
   }
 
   // door
@@ -656,15 +699,25 @@ function house(ctx, W, H, cfg) {
 
   // windows
   const winY = wallTop + 7;
-  const ww = t === 1 ? 4 : t === 2 ? 5 : 6;
-  const wh = t === 1 ? 4 : 5;
+  const ww = W >= 64 ? 8 : t === 1 ? 4 : t === 2 ? 5 : 6;
+  const wh = W >= 64 ? 7 : t === 1 ? 4 : 5;
   const lit = t >= 3;
-  const spots = cfg.windows || (W >= 40 ? [7, W - 8] : [6, W - 7]);
+  const spots = cfg.windows || (W >= 64 ? [12, W / 2, W - 12] : W >= 40 ? [7, W - 8] : [cfg.doorCX < W / 2 ? W - 8 : 8]);
   for (const sx of spots) {
     window9(ctx, sx - (ww >> 1), winY, ww, wh, lit, {
       shutters: t >= 2 ? mix(ramp[2], P.wood2, 0.4) : null,
       box: t >= 2,
     });
+  }
+  if (H >= 80 && W >= 64) {
+    // The established homes have an upstairs and a generous ground floor, with
+    // a clear timber rail between them. The bottom windows flank the real door.
+    for (const sx of [12, W - 12]) {
+      if (Math.abs(sx - cfg.doorCX) < 13) continue;
+      window9(ctx, sx - 4, H - 20, 8, 7, lit, {
+        shutters: mix(ramp[2], P.wood2, 0.4), box: true,
+      });
+    }
   }
 
   // A narrow doorstep makes the entrance readable at every tier, including the
@@ -674,7 +727,7 @@ function house(ctx, W, H, cfg) {
   px(ctx, doorCX - (doorW >> 1), H - 1, STONE[2], doorW, 1);
 
   // tier dressing
-  if (t >= 2) chimney(ctx, cfg.chimX ?? (W - 12), Math.max(0, roofH - overhangPx - 6), overhangPx > 8 ? 12 : 9, t >= 3);
+  if (t >= 2) chimney(ctx, cfg.chimX ?? (W - 12), Math.max(0, roofY + 2), overhangPx > 8 ? 12 : 9, t >= 3);
   if (t >= 3) {
     banner(ctx, 2, roofH + 1, 12, ramp[1], ramp[3]);
     banner(ctx, W - 6, roofH + 1, 12, ramp[1], ramp[3]);
@@ -698,6 +751,63 @@ function house(ctx, W, H, cfg) {
     px(ctx, (W >> 1) - 3, 0, P.gold2, 6, 2);
     px(ctx, (W >> 1) - 2, -4, LITG[1], 4, 5);
     px(ctx, (W >> 1) - 2, -4, LITG[0], 4, 2);
+  }
+  timberDetails(ctx, W, H, cfg, roofH, wallTop, roofY, roofRise);
+}
+
+/** Finer material work for the real-time world: individual tiles, framed dormer,
+ * chipped timber and vines that grow from the foundation, never random noise. */
+function timberDetails(ctx, W, H, cfg, roofH, wallTop, roofY, roofRise) {
+  const put = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
+  const ramp = cfg.roof;
+  const roofShade = mix(ramp[3], '#302b27', 0.32);
+  // Shingle edges curve over the next course. At two pixels per logical pixel,
+  // their small warm rims stay visible while the roof still reads as one mass.
+  const topHalf = Math.max(2, Math.round(W / 2 - roofRise * 0.62));
+  for (let y = roofY + 5; y < roofH - 3; y += 4) {
+    const half = topHalf + (W / 2 - topHalf) * ((y - roofY) / (roofRise - 1));
+    const inset = Math.max(1, Math.ceil(W / 2 - half) + 1);
+    for (let x = inset + ((y >> 2) % 2 ? 2 : 0); x < W - inset - 3; x += 6) {
+      put(x, y, 3, 0.5, mix(ramp[0], '#edd19b', 0.2));
+      put(x + 3, y + 1, 0.5, 1.5, roofShade);
+      put(x + 0.5, y + 2.5, 3, 0.5, ramp[2]);
+    }
+  }
+  // A front-facing dormer gives even the smallest cottage a welcoming face.
+  if (cfg.tier >= 2) {
+    const cx = W >= 40 ? W / 2 - 1 : (cfg.doorCX < W / 2 ? W - 11 : 11);
+    const y = roofY + Math.max(5, Math.floor(roofRise * 0.25));
+    put(cx - 4, y + 4, 8, 8, '#553c2b');
+    put(cx - 3, y + 5, 6, 6, '#d1bb83');
+    put(cx - 2.5, y + 6, 5, 4.5, '#bd944f');
+    put(cx - 2, y + 6, 4, 2, '#efd597');
+    put(cx - 0.5, y + 6, 1, 5, '#745031');
+    put(cx - 3, y + 8, 6, 0.5, '#745031');
+    for (let row = 0; row < 5; row++) {
+      put(cx - row - 1, y + row, row * 2 + 2, 1, row === 4 ? '#4f3928' : ramp[2]);
+      put(cx - row - 1, y + row, 1, 0.5, mix(ramp[0], '#e6c28b', 0.25));
+    }
+    put(cx - 4, y + 12, 8, 0.5, '#c3a474');
+  }
+  for (const x of [1.5, W - 2.5]) {
+    for (let y = wallTop + 5; y < H - 5; y += 6) {
+      put(x, y, 0.5, 2.5, '#b28c58');
+      put(x + 0.5, y + 3, 0.5, 1, '#553c2b');
+    }
+  }
+  // A diagonal brace ties each corner into the upper wall rail.
+  if (cfg.tier >= 2) {
+    for (let i = 0; i < 4; i++) {
+      put(3 + i, roofH + 3 + i, 1.5, 1, '#805b39');
+      put(W - 4 - i, roofH + 3 + i, 1, 1, '#6b4b32');
+    }
+    const vineX = cfg.doorCX < W / 2 ? W - 3 : 2;
+    for (let y = H - 7; y > roofH + 10; y -= 3) {
+      put(vineX, y, 0.5, 3, '#65734a');
+      put(vineX - 1, y, 2, 1, '#58734b');
+      put(vineX + 0.5, y - 1, 2, 1, '#91a35a');
+      if ((y | 0) % 2) put(vineX - 0.5, y - 0.5, 0.5, 0.5, '#d9ba7c');
+    }
   }
 }
 
@@ -1071,23 +1181,27 @@ const BCFG = {
   kitchen: { roof: LITG.map(c => mix(c, P.roof1, 0.3)), emblem: 'pot' },
   workshop: { roof: ROOFB, emblem: 'hammer' },
   library: { roof: ROOFV, emblem: 'book' },
-  infirmary: { roof: PLAS, emblem: 'heart' },
+  infirmary: { roof: ['#a8b884', '#7d966d', '#566b56', '#374f45'], emblem: 'heart' },
   bathhouse: { roof: ROOFB.map(c => mix(c, P.water1, 0.3)), emblem: 'drop' },
 };
 
-function buildingPainter(b, tier) {
+function buildingPainter(b, tier, options = {}) {
   const W = b.w * 16, H = (b.h + b.overhang) * 16;
-  return ctx => {
+  return (ctx, physicalW = W, physicalH = H) => {
     if (b.id === 'hearthstone') return hearthMonument(ctx, W, H, tier);
     if (b.id === 'garden') return gardenPlot(ctx, W, H, tier);
     if (b.id === 'fountain') return fountain(ctx, W, H, tier);
     if (b.id === 'market') return marketStall(ctx, W, H, tier);
     if (b.id === 'gate') return villageGate(ctx, W, H, tier);
     if (b.id === 'belltower') return bellTower(ctx, W, H, tier);
-    const cfg = { ...(BCFG[b.id] || { roof: ROOFR }), tier, overhang: b.overhang };
+    const cfg = { ...(BCFG[b.id] || { roof: ROOFR }), tier, overhang: b.overhang,
+      doorCX: options.doorCX ?? (Math.floor((b.w - 1) / 2) * 16 + 8) };
+    ctx.save();
+    ctx.scale(physicalW / W, physicalH / H);
     if (tier >= 4) grandHouse(ctx, W, H, cfg);
     else house(ctx, W, H, cfg);
-    autoOutline(ctx, W, H, 0.5);
+    ctx.restore();
+    autoOutline(ctx, physicalW, physicalH, 0.5);
   };
 }
 
@@ -1097,12 +1211,18 @@ export function register() {
     const base = LOOKS[who] || LOOKS.hero;
     for (const dir of DIRS4) {
       const look = { ...base, __dir: dir };
-      Atlas.defineAnim(`c.${who}.${dir}`, 16, 24, CHAR_FRAMES, charPainter(look));
+      Atlas.defineHD(`c.${who}.${dir}`, 16, 24, 2, charPainter(look), CHAR_FRAMES);
     }
   }
   for (const b of BUILDINGS) {
     for (let i = 1; i <= b.tiers; i++) {
-      Atlas.define(`b.${b.id}.t${i}`, b.w * 16, (b.h + b.overhang) * 16, buildingPainter(b, i));
+      if (BCFG[b.id]) Atlas.defineHD(`b.${b.id}.t${i}`, b.w * 16, (b.h + b.overhang) * 16, 2, buildingPainter(b, i));
+      else Atlas.define(`b.${b.id}.t${i}`, b.w * 16, (b.h + b.overhang) * 16, buildingPainter(b, i));
     }
+  }
+  for (const id of ['cottage', 'infirmary', 'workshop']) {
+    const base = BUILDINGS.find(b => b.id === id);
+    const b = { ...base, w: id === 'workshop' ? 5 : 4, h: 3 };
+    Atlas.defineHD(`b.${id}.authored`, b.w * 16, (b.h + b.overhang) * 16, 2, buildingPainter(b, 2, { doorCX: 40 }));
   }
 }

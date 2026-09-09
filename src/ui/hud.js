@@ -19,6 +19,7 @@ import { clockText } from '../world/daynight.js';
 const toasts = [];
 let hide = 0;            // 0 = fully shown, 1 = fully tucked away
 let t = 0;
+let journeyKey = '', journeySince = 0, journeyScene = null;
 
 const fit = (text, width) => {
   let out = String(text);
@@ -32,7 +33,7 @@ const count = n => n >= 10000 ? `${Math.floor(n / 1000)}k` : String(n);
 // after the companion introduction, so the board stays connected to the world.
 export function journeyGoal(map) {
   if (!S.party.length) return {
-    title: 'Find your first Guardian',
+    title: 'Meet Gran Willow',
     hint: map?.id === 'granhouse' ? 'Talk to Gran beside the table.'
       : map?.id === 'village' ? 'Gran waits north of the plaza.' : 'Return to Emberhollow for Gran.',
     target: map?.npcs?.find(n => n.who === 'gran'),
@@ -52,17 +53,35 @@ export function journeyGoal(map) {
   return { title: 'Good things, done together', hint: `${Input.label('start')} > Family missions to choose one.` };
 }
 
+// A quiet glass plaque keeps the scenery visible. The heavier framed windows
+// belong to dialogue and menus, where reading is the main activity.
+function plaque(x, y, w, h, alpha = 0.82) {
+  R.rect(x + 1, y + 1, w, h, 'rgba(8,19,19,0.25)');
+  R.rect(x, y, w, h, `rgba(17,34,30,${alpha})`);
+  R.stroke(x, y, w, h, '#71816a');
+  R.rect(x + 1, y + 1, w - 2, 1, 'rgba(244,219,157,0.12)');
+}
+
 function drawJourney(map, goal) {
-  if (hide > 0.15 || S.settings.showHints === false) return;
-  const x = 4, y = 22, w = 186;
-  Frame.panel(x, y, w, 35, { style: 'hud', alpha: 0.94 });
-  R.rect(x + 4, y + 6, 2, 23, P.gold2);
-  Frame.write(fit(map?.name || 'YOUR JOURNEY', w - 20), x + 11, y + 5, 'hud', { color: P.gold1 });
-  Frame.write(fit(goal.title, w - 20), x + 11, y + 15, 'hud');
-  Frame.write(fit(goal.hint, w - 20), x + 11, y + 25, 'hud', { color: P.ui1 });
-  if (Input.device !== 'touch') {
+  if (hide > 0.15 || S.settings.showHints === false || (map?.indoor && map.id !== 'granhouse')) return;
+  const x = 4, y = 21;
+  const w = Math.min(188, Font.measure(goal.title) + 20);
+  plaque(x, y, w, 14, 0.74);
+  R.rect(x + 5, y + 5, 3, 3, P.gold1);
+  R.rect(x + 6, y + 4, 1, 5, P.gold0);
+  Frame.write(fit(goal.title, w - 17), x + 12, y + 4, 'hud');
+
+  // Give arrivals a short route reminder, then leave the landscape clear.
+  // Closing the journal recalls it when the player wants their bearings again.
+  const reading = performance.now() - journeySince < 5000;
+  if (reading) {
+    const hintW = Math.min(211, Font.measure(goal.hint) + 12);
+    plaque(x, y + 16, hintW, 12, 0.70);
+    Frame.write(fit(goal.hint, hintW - 12), x + 6, y + 19, 'hud', { color: '#d7dec3' });
+  }
+  if (Input.device !== 'touch' && reading) {
     const text = `${Input.label('move')} move   ${Input.label('a')} interact   ${Input.label('start')} journal`;
-    Frame.panel(4, R.H - 15, Font.measure(text) + 12, 12, { style: 'hud', alpha: 0.86 });
+    plaque(4, R.H - 15, Font.measure(text) + 12, 12, 0.64);
     Frame.write(text, 10, R.H - 12, 'hud', { color: P.ui1 });
   }
 }
@@ -96,13 +115,23 @@ function buildMinimap(map) {
     }
   }
   x.putImageData(img, 0, 0);
+  // A building silhouette, roof and entrance are legible even at one map pixel
+  // per tile. Previously houses appeared as indistinguishable dark obstacles.
+  for (const st of map.structures || []) {
+    x.fillStyle = '#644d35';
+    x.fillRect(st.x, st.y, st.w, st.h);
+    x.fillStyle = '#c59554';
+    x.fillRect(st.x, st.y, st.w, 1);
+    const door = st.door;
+    if (door) { x.fillStyle = '#ffe1a0'; x.fillRect(door.x, door.y, 1, 1); }
+  }
   return c;
 }
 
 function drawMinimap(map, x, y, w, h, goal) {
   if (!map) return;
   if (miniFor !== map.id) { mini = buildMinimap(map); miniFor = map.id; }
-  Frame.panel(x, y, w, h, { style: 'dark', alpha: 0.82 });
+  plaque(x, y, w, h, 0.88);
   const iw = w - 6, ih = h - 6;
   const s = Math.min(iw / map.w, ih / map.h);
   const dw = Math.max(1, Math.round(map.w * s)), dh = Math.max(1, Math.round(map.h * s));
@@ -112,6 +141,17 @@ function drawMinimap(map, x, y, w, h, goal) {
   ctx.globalAlpha = 0.85;
   ctx.drawImage(mini, dx, dy, dw, dh);
   ctx.globalAlpha = 1;
+  // Visible camera bounds make the small map useful for orientation, including
+  // after the player walks away from the next story destination.
+  const vx = dx + clamp(R.camera.x / 16, 0, map.w) * s;
+  const vy = dy + clamp(R.camera.y / 16, 0, map.h) * s;
+  const vw = Math.min((R.viewW || R.W) / 16 * s, dx + dw - vx);
+  const vh = Math.min((R.viewH || R.H) / 16 * s, dy + dh - vy);
+  R.stroke(Math.round(vx), Math.round(vy), Math.max(1, Math.round(vw)), Math.max(1, Math.round(vh)), 'rgba(243,231,171,0.36)');
+  for (const warp of map.warps || []) {
+    if (warp.x > 1 && warp.x < map.w - 2 && warp.y > 1 && warp.y < map.h - 2) continue;
+    R.rect(dx + Math.round(warp.x * s), dy + Math.round(warp.y * s), 2, 2, '#e3c481');
+  }
   // A steady white pip stays findable; gold marks the next story destination.
   if (goal?.target && S.settings.showHints !== false) {
     const gx = dx + Math.round(goal.target.x * s), gy = dy + Math.round(goal.target.y * s);
@@ -123,6 +163,12 @@ function drawMinimap(map, x, y, w, h, goal) {
   R.rect(px - 2, py - 2, 5, 5, '#142926');
   R.rect(px - 1, py - 1, 3, 3, '#fff6c4');
   R.rect(px, py, 1, 1, P.ember1);
+  const direction = { up: [0, -3], down: [0, 3], left: [-3, 0], right: [3, 0] }[S.player.dir] || [0, 3];
+  R.rect(px + direction[0], py + direction[1], 1, 1, '#fff6c4');
+  const title = fit(map.name || 'Valley', 90);
+  const titleW = Font.measure(title) + 6;
+  plaque(x + w - titleW, y - 11, titleW, 11, 0.83);
+  Frame.write(title, x + w - titleW + 3, y - 8, 'hud', { color: '#e1d4ad' });
 }
 
 // --- the bar -----------------------------------------------------------------
@@ -132,7 +178,7 @@ function drawTop(map) {
 
   // time + season
   const w1 = 78;
-  Frame.panel(4, y, w1, 16, { style: 'hud', alpha: 0.86 });
+  plaque(4, y, w1, 16);
   skyIcon(8, y + 4, S.clock.hour);
   Frame.write(clockText(), 20, y + 5, 'hud');
   seasonIcon(48, y + 4, S.clock.season);
@@ -142,7 +188,7 @@ function drawTop(map) {
   const coins = count(S.coins), hearth = count(S.hearth);
   const w2 = 38 + Font.measure(coins) + Font.measure(hearth);
   const x2 = 4 + w1 + 4;
-  Frame.panel(x2, y, w2, 16, { style: 'hud', alpha: 0.86 });
+  plaque(x2, y, w2, 16);
   const ci = Atlas.tryGet('ui.coin');
   if (ci) R.blit(ci, x2 + 4, y + 3);
   Frame.write(coins, x2 + 16, y + 5, 'hud');
@@ -155,7 +201,7 @@ function drawTop(map) {
   if (S.party.length) {
     const pw = 8 + S.party.length * 10;
     const x3 = x2 + w2 + 4;
-    Frame.panel(x3, y, pw, 16, { style: 'hud', alpha: 0.86 });
+    plaque(x3, y, pw, 16);
     S.party.forEach((g, i) => {
       const f = g.maxhp ? clamp(g.hp / g.maxhp, 0, 1) : 0;
       const px = x3 + 5 + i * 10;
@@ -218,18 +264,23 @@ export const HUD = {
       // The world also renders below pause, settings and dialogue. Those scenes
       // own their prompts; exploration chrome must not peek through underneath.
       const placing = document.body.classList.contains('build-active');
-      if (Scenes.topName !== 'overworld') {
+      const scene = Scenes.topName;
+      const returningFromJournal = scene === 'overworld' && journeyScene === 'pause';
+      journeyScene = scene;
+      if (scene !== 'overworld') {
         if (placing) drawTop(map);
         return;
       }
       drawTop(map);
       const goal = journeyGoal(map);
+      const key = `${map?.id}:${goal.title}`;
+      if (key !== journeyKey || returningFromJournal) { journeyKey = key; journeySince = performance.now(); }
       if (!placing) drawJourney(map, goal);
       if (hide < 0.5 && map && !map.indoor) {
-        const mw = 54, mh = 44;
+        const mw = 49, mh = 39;
         // Touch action buttons occupy the lower-right. Keep the map directly
         // below the menu button instead of covering either control.
-        const baseY = document.body.classList.contains('touch') ? 28 : R.H - mh - 4;
+        const baseY = document.body.classList.contains('touch') ? 40 : R.H - mh - 4;
         drawMinimap(map, R.W - mw - 4, baseY + Math.round(hide * 60), mw, mh, goal);
       }
       drawToasts();

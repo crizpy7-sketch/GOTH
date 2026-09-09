@@ -4,7 +4,7 @@ A cozy creature-bonding and village-building RPG. Explore Emberhollow, meet its 
 
 ## Play
 
-Open **index.html** in a modern browser. All code, sprites, and illustration assets are embedded, so the delivered game also works offline. Saves stay in that browser on that device. For a consistent local save origin, run `npm run preview` and open http://127.0.0.1:4173.
+[Play on GitHub Pages](https://crizpy7-sketch.github.io/GOTH/) or open **index.html** in a modern browser. All code, sprites, and illustration assets are embedded, so the delivered game also works offline. Saves stay in that browser on that device. For a consistent local save origin, run `npm run preview` and open http://127.0.0.1:4173.
 
 | Action | Keyboard | Controller | Touch |
 | --- | --- | --- | --- |
@@ -15,7 +15,17 @@ Open **index.html** in a modern browser. All code, sprites, and illustration ass
 | Journal | M | Menu | Menu |
 | Village shortcut | C | View | Journal → Village |
 
-On phones, play in landscape. Controls sit beside the game so dialogue and menus stay visible. The title menu supports mouse, touch, keyboard, and controller. Settings include sound, volume, text speed, journey hints, and reduced motion.
+On phones, play in landscape. Translucent controls overlay the playfield edges, move clear of dialogue, and switch to precise arrows in menus. The fullscreen button appears on supported browsers. The title menu supports mouse, touch, keyboard, and controller. Settings include sound, volume, text speed, journey hints, and reduced motion.
+
+## World and player experience v2
+
+- Wider exploration camera with a 960×540 render surface and separate, readable UI coordinates.
+- Detailed transparent oak sprites, HD terrain, natural path edges, worn paving, timber interiors and seasonal foliage.
+- Larger established homes with doors aligned to their entrances; older saves recover safely from expanded footprints.
+- Original Embercub and Leafowl battle poses, sharing consistent framing and scale.
+- Your lead Guardian follows the route you actually walked, including corners and ledges.
+- Compact destination guidance, hints that tuck away, and a minimap that marks the camera, buildings and exits.
+- Cached lighting and silhouettes keep the added detail from adding repeated pixel processing to every frame.
 
 ## Graphics and experience update
 

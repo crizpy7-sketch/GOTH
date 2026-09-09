@@ -2,6 +2,8 @@
 // Responsiveness is a headline quality target, so presses are edge-buffered: a tap
 // that starts and ends inside one logical frame still registers.
 
+import { Scenes } from './scene.js';
+
 const BTNS = ['up', 'down', 'left', 'right', 'a', 'b', 'start', 'select', 'run'];
 
 const KEYMAP = {
@@ -29,6 +31,7 @@ let anyPress = false;
 let lastInputAt = 0;
 let tickTouch = () => {};
 let resetTouch = () => {};
+let syncTouchLayout = () => {};
 let device = 'keyboard';
 const repeatAt = new Map();
 
@@ -159,6 +162,7 @@ export const Input = {
   _scriptSeq: 0,
   script(btn, frames = 2) { this._scripted.push({ btn, frames, source: `script:${++this._scriptSeq}`, active: false }); },
   runScripted() {
+    syncTouchLayout();
     tickTouch();
     for (let i = this._scripted.length - 1; i >= 0; i--) {
       const s = this._scripted[i];
@@ -227,11 +231,55 @@ function initTouch() {
     el.addEventListener('pointerup', off);
     el.addEventListener('pointercancel', off);
     el.addEventListener('lostpointercapture', off);
+    // Keyboard and assistive activation produces a click without a pointer.
+    // Pointer clicks already supplied their buffered press above.
+    el.addEventListener('click', e => { if (e.detail === 0) Input.script(btn, 2); });
     buttonResetters.push(() => off(null));
   };
   bind(document.getElementById('tA'), 'a');
   bind(document.getElementById('tB'), 'b');
   bind(document.getElementById('tM'), 'start');
+  for (const dir of ['up', 'down', 'left', 'right']) bind(document.getElementById(`t${dir}`), dir);
+
+  const full = document.getElementById('tF');
+  if (full) {
+    full.hidden = !document.documentElement?.requestFullscreen;
+    full.addEventListener('click', async e => {
+      e.preventDefault();
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await document.documentElement.requestFullscreen();
+      } catch { /* Some mobile browsers keep their own browser controls. */ }
+    });
+    document.addEventListener('fullscreenchange', () => {
+      full.setAttribute('aria-label', document.fullscreenElement ? 'Exit fullscreen' : 'Enter fullscreen');
+    });
+  }
+
+  let touchMode = '';
+  syncTouchLayout = () => {
+    if (!document.body?.dataset) return;
+    const scene = Scenes.topName;
+    const mode = scene === 'overworld' ? 'world' : scene === '__say' ? 'dialogue'
+      : scene === 'battle' ? 'battle' : scene === 'build' ? 'build'
+      : scene === 'title' ? 'title' : 'menu';
+    if (mode !== touchMode) {
+      if (touchMode) resetTouch();
+      touchMode = mode;
+      document.body.dataset.touchMode = mode;
+      const a = document.getElementById('tA'), b = document.getElementById('tB');
+      if (a) a.textContent = mode === 'menu' ? 'Select' : 'A';
+      if (b) b.textContent = mode === 'menu' ? 'Back' : 'B';
+    }
+    if (mode === 'dialogue') {
+      const choices = Scenes.top?.__params?.choices?.length || 0;
+      document.body.dataset.dialogueChoices = choices ? 'yes' : 'no';
+      // Dialogue grows upward when it has choices. Controls follow its top edge
+      // so no paragraph or choice row is hidden behind a thumb target.
+      const top = Math.max(18, (180 - 58 - choices * 12) / 180 * 100);
+      document.body.style?.setProperty('--dialogue-top', `${top}%`);
+    }
+  };
 
   if (!pad) {
     resetTouch = () => { for (const reset of buttonResetters) reset(); };

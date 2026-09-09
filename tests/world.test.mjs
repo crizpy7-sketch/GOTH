@@ -63,7 +63,7 @@ test('roads remain clear of meadow decorations and false object shadows', async 
   h.render(LAYER.GROUND);
   assert.ok(h.sprites.length > 100, 'the fixture must actually render its road tiles');
   assert.ok(h.sprites.every(s => s.name.startsWith('t.path.')));
-  const dressing = h.rectangles.filter(r => r.w !== R.W || r.h !== R.H);
+  const dressing = h.rectangles.filter(r => r.w !== R.viewW || r.h !== R.viewH);
   assert.deepEqual(dressing, [], 'road cells must not receive flowers, blades or block shadows');
 });
 
@@ -71,7 +71,7 @@ test('solid water receives reflections without inheriting solid-object shadows',
   const h = await harness(t, { tile: 'w' });
   assert.equal(h.map.solid(5, 5), true, 'fixture must reproduce non-walkable water');
   h.render(LAYER.GROUND);
-  const dressing = h.rectangles.filter(r => r.w !== R.W || r.h !== R.H);
+  const dressing = h.rectangles.filter(r => r.w !== R.viewW || r.h !== R.viewH);
   assert.ok(dressing.length > 0, 'ponds should have visible reflection strokes');
   assert.ok(dressing.every(r => r.h === 1), 'water dressing should remain thin reflected light');
   assert.ok(dressing.every(r => r.color.startsWith('rgba(223,248,248,')),
@@ -117,6 +117,45 @@ test('an indoor scene stays dry during an outdoor storm', async t => {
   h.render(LAYER.WEATHER);
   assert.deepEqual(h.sprites, [], 'rain and snow must not be painted inside the room');
   assert.equal(h.tints.length, 1, 'interior lighting still applies');
+});
+
+test('interior furniture shadows are cached beneath props without treating walls or doors as furniture', async t => {
+  const rows = Array(12).fill('_'.repeat(20));
+  rows[2] = '__]__E__d__U________';
+  rows[5] = '____t_______R_______';
+  const h = await harness(t, { rows, indoor: true });
+  const mid = t.mock.method(h.map, 'mid', h.map.mid.bind(h.map));
+  h.render(LAYER.GROUND);
+  const shadows = h.rectangles.filter(r => r.color.startsWith('rgba(44,30,20,'));
+  assert.ok(shadows.length > 0, 'table and plant have a ground contact shadow');
+  assert.ok(shadows.every(r => r.y >= 5 * 16 + 12 && r.y < 6 * 16 + 3),
+    'wall, window, door and hanging art receive no furniture footprint');
+  assert.ok(shadows.some(r => r.x < 5 * 16) && shadows.some(r => r.x > 12 * 16),
+    'both solid floor props receive a shadow');
+  assert.ok(mid.mock.callCount() > 0, 'furniture geometry was discovered on the first render');
+  mid.mock.resetCalls();
+  h.render(LAYER.GROUND);
+  assert.equal(mid.mock.callCount(), 0, 'subsequent ground draws reuse cached furniture positions');
+  h.render(LAYER.MID);
+  assert.ok(h.rectangles.every(r => !r.color.startsWith('rgba(44,30,20,')),
+    'the shadow never draws over the furniture art');
+});
+
+test('large oak casts one broad canopy shadow anchored to its roots', async t => {
+  const rows = Array(12).fill('p'.repeat(20));
+  rows[3] = 'ppppppTppppppppppppp';
+  const h = await harness(t, { rows });
+  t.mock.method(Atlas, 'tryGet', name => name ? {
+    name, width: name === 't.tree.oak' ? 96 : 16, height: name === 't.tree.oak' ? 128 : 16,
+    logicalWidth: name === 't.tree.oak' ? 48 : 16,
+  } : null);
+  h.render(LAYER.GROUND);
+  const canopy = h.rectangles.filter(r => r.color === 'rgba(32,65,45,0.12)');
+  const root = h.rectangles.filter(r => r.color === 'rgba(25,47,33,0.16)');
+  assert.ok(canopy.some(r => r.w >= 40), '48px crown has a broader cast shadow than a small pine');
+  assert.equal(root.length, 1, 'a whole oak has one root contact shadow, not one per solid canopy cell');
+  assert.ok(canopy.every(r => r.y >= root[0].y - 2 && r.y <= root[0].y + 13),
+    'the crown shadow stays near the roots instead of darkening the full canopy height');
 });
 
 test('reduced motion lowers weather density and rain-to-snow changes reset particle speeds', async t => {
