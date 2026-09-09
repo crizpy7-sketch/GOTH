@@ -1424,16 +1424,449 @@ TP['t.gravel'] = ctx => {
 };
 
 // ===========================================================================
+// Fine pixel painters. Terrain still occupies one 16px world cell, but the art
+// is drawn at twice that density. Connected colour clusters carry the material:
+// blades and clover in meadows, worn stone in streets, grain in warm oak floors.
+// There is deliberately no per-frame noise or canvas smoothing here.
+// ===========================================================================
+const HD = {};
+const MEADOW = ['#a9bc65', '#91ad55', '#79964b', '#6c8941', '#567438', '#36552d'];
+const OAK = ['#c1975c', '#ac7b46', '#906039', '#734b2e', '#543823', '#33291e'];
+
+function grassHD(ctx, variant = 0) {
+  px(ctx, 0, 0, '#759448', 32, 32);
+  // Low contrast islands cross both tile edges, so adjacent cells stay seamless.
+  for (let i = 0; i < 12; i++) {
+    const x = (i * 13 + variant * 7) % 32, y = (i * 7 + variant * 11) % 32;
+    const col = i % 3 === 0 ? '#708e44' : '#79974b';
+    for (const ox of [-32, 0, 32]) for (const oy of [-32, 0, 32]) {
+      px(ctx, x + ox, y + oy, col, 6, 2);
+      px(ctx, x + ox + 1, y + oy - 1, col, 3, 4);
+    }
+  }
+  for (let i = 0; i < 25; i++) {
+    const x = 1 + Math.floor(hash(i, variant, 712) * 29);
+    const y = 2 + Math.floor(hash(i, variant, 715) * 28);
+    const bright = i % 4 === 0;
+    px(ctx, x, y, bright ? '#849f50' : '#68883f', 2, 1);
+    if (i % 3 === 0) {
+      px(ctx, x, y - 1, bright ? '#91aa56' : '#7e9d4b');
+      px(ctx, x + 2, y - 2, '#86a250');
+      px(ctx, x + 2, y - 1, '#739144');
+    }
+  }
+  // Tiny clover pairs are softer than isolated bright pixels.
+  for (let i = 0; i < 3; i++) {
+    const x = 3 + (i * 11 + variant * 5) % 25, y = 5 + (i * 7 + variant * 9) % 23;
+    px(ctx, x, y, '#6c873f', 4, 1);
+    px(ctx, x, y - 1, '#809b4d', 2, 1);
+    px(ctx, x + 2, y - 2, '#8aa553', 2, 1);
+  }
+}
+
+function grassClumpHD(ctx, x, y, height = 9, lean = 0, golden = false) {
+  const ramp = golden ? ['#bac777', '#96b258', '#759145', '#496931'] : MEADOW;
+  for (const [off, heightDelta, tilt] of [[-4, -4, -2], [-1, 0, lean], [2, -2, 2], [5, -5, 3]]) {
+    const h = Math.max(3, height + heightDelta);
+    for (let j = 0; j < h; j++) {
+      const bx = x + off + Math.round((tilt + lean) * j / h);
+      px(ctx, bx, y - j, j > h - 3 ? ramp[0] : ramp[2], j === h - 1 ? 1 : 2, 1);
+      if (j < h - 3) px(ctx, bx + 1, y - j, ramp[3]);
+    }
+  }
+}
+
+function flowerHD(ctx, x, y, petals = '#f1eac0', center = '#d7a446', size = 1) {
+  px(ctx, x, y, '#476a35', 1, 5);
+  px(ctx, x - 2, y + 2, '#85a651', 2, 1);
+  px(ctx, x + 1, y + 1, '#698c43', 2, 1);
+  px(ctx, x - size, y - size, petals, size, size);
+  px(ctx, x + 1, y - size, petals, size, size);
+  px(ctx, x - size, y + 1, shade(petals, -0.14), size, size);
+  px(ctx, x + 1, y + 1, shade(petals, -0.14), size, size);
+  px(ctx, x, y, center);
+}
+
+for (const [i, suffix] of ['', '.a', '.b', '.c'].entries()) HD[`t.grass${suffix}`] = ctx => grassHD(ctx, i);
+HD['t.grass.tuft'] = ctx => {
+  grassHD(ctx, 1);
+  grassClumpHD(ctx, 12, 25, 9, -1);
+  grassClumpHD(ctx, 23, 17, 6, 1, true);
+};
+HD['t.grass.flower'] = ctx => {
+  grassHD(ctx, 2);
+  for (const [x, y] of [[7, 12], [12, 9], [22, 23], [25, 18]]) flowerHD(ctx, x, y);
+  flowerHD(ctx, 15, 26, '#e3c96b', '#8c7132');
+};
+HD['t.grass.flower2'] = ctx => {
+  grassHD(ctx, 3);
+  for (const [x, y, color] of [[8, 18, '#e9b3a0'], [12, 13, '#dfb8a9'], [23, 10, '#d8bfdc'], [24, 25, '#dba2a0']]) flowerHD(ctx, x, y, color, '#c99159');
+};
+HD['t.grass.pebble'] = ctx => {
+  grassHD(ctx);
+  for (const [x, y, r] of [[9, 16, 4], [23, 22, 3], [25, 8, 2]]) {
+    ellipse(ctx, x + 1, y + 2, r + 1, r * .65, '#5c713b');
+    shadedBlob(ctx, x, y, r, r * .65, ['#c0bc8d', '#a2a47e', '#808764', '#5c6c4e'], { noRim: true });
+    px(ctx, x - 1, y - 1, '#d4c79c', 2, 1);
+  }
+};
+HD['t.tallgrass'] = (ctx, w, h, frame) => {
+  grassHD(ctx, 2);
+  for (const [y, off] of [[13, 0], [23, 3], [31, -1]]) {
+    for (let x = -2; x < 35; x += 7) {
+      const high = 8 + Math.floor(hash(x, y, 771) * 5);
+      grassClumpHD(ctx, x + off, y, high, frame ? 1 : 0, y === 13);
+    }
+  }
+};
+HD['t.leaves'] = ctx => {
+  grassHD(ctx, 2);
+  for (let i = 0; i < 16; i++) {
+    const x = 2 + (i * 13) % 27, y = 2 + (i * 9) % 27;
+    px(ctx, x, y, ['#b5994e', '#957943', '#d1a958', '#8b8145'][i % 4], 3, 1);
+    px(ctx, x + 1, y - 1, '#b79d53', 2, 1);
+  }
+};
+
+function pathHD(ctx, mask = 15, forest = false) {
+  const earth = '#b89a60';
+  px(ctx, 0, 0, earth, 32, 32);
+  for (let i = 0; i < 19; i++) {
+    const x = (i * 13 + 3) % 32, y = (i * 7 + 1) % 32;
+    px(ctx, x, y, i % 3 ? '#bea16a' : '#b29459', 3 + i % 4, 1);
+    if (i % 4 === 0) px(ctx, x + 1, y + 1, '#c5a972', 2, 1);
+  }
+  for (const [x, y, r] of [[8, 12, 3], [24, 25, 2]]) {
+    ellipse(ctx, x + 1, y + 1, r, 1.8, '#9d814f');
+    ellipse(ctx, x, y, r, 1.7, '#d3bd89');
+    px(ctx, x - 1, y - 1, '#e1cfa1', 2, 1);
+  }
+  const edge = (vertical, end, side) => {
+    for (let i = 0; i < 32; i++) {
+      // Broad scallops, not independent noisy teeth. Corners stay grass-covered.
+      const wave = [1, 1, 2, 2, 3, 3, 2, 1][Math.floor(i / 2) % 8];
+      const depth = wave + (forest ? 2 : 0);
+      for (let d = 0; d <= depth + 1; d++) {
+        const x = vertical ? (end ? 31 - d : d) : i;
+        const y = vertical ? i : (end ? 31 - d : d);
+        px(ctx, x, y, d < depth ? '#759448' : d === depth ? '#5e7b38' : '#a1834d');
+      }
+      if (i % 7 === side) {
+        const x = vertical ? (end ? 31 - depth : depth) : i;
+        const y = vertical ? i : (end ? 31 - depth : depth);
+        px(ctx, x, y - 1, '#99af59');
+      }
+    }
+  };
+  if (!(mask & 1)) edge(false, false, 0);
+  if (!(mask & 4)) edge(false, true, 2);
+  if (!(mask & 8)) edge(true, false, 4);
+  if (!(mask & 2)) edge(true, true, 1);
+}
+
+function pavingHD(ctx, cobble = false) {
+  px(ctx, 0, 0, cobble ? '#797958' : '#9c8758', 32, 32);
+  const height = cobble ? 7 : 10, width = cobble ? 10 : 14;
+  for (let row = -1; row < 5; row++) {
+    const y = row * height + 1;
+    for (let x = row % 2 ? -width / 2 : 0; x < 32; x += width) {
+      const ramp = cobble ? ['#aaa684', '#96987a', '#838667', '#6d7358'] : ['#c8b382', '#bba574', '#aa9465', '#8b8055'];
+      const toneIndex = hash(x, y, 712) > .5 ? 1 : 2;
+      px(ctx, x + 1, y, ramp[toneIndex], width - 2, height - 1);
+      px(ctx, x + 2, y, ramp[0], width - 4, 1);
+      px(ctx, x + 1, y + 1, ramp[0], 1, height - 3);
+      px(ctx, x + width - 2, y + 2, ramp[3], 1, height - 3);
+      px(ctx, x + 2, y + height - 2, ramp[3], width - 4, 1);
+      if (row % 2) px(ctx, x + 5, y + 3, ramp[2], 3, 1);
+    }
+  }
+  // Small moss in joins reinforces warm, timeworn village stone.
+  for (const [x, y] of [[1, 10], [19, 20], [13, 30]]) {
+    px(ctx, x, y, '#84914c', 3, 1); px(ctx, x + 1, y + 1, '#657c41');
+  }
+}
+HD['t.plaza'] = ctx => pavingHD(ctx);
+HD['t.cobble'] = ctx => pavingHD(ctx, true);
+HD['t.plaza.edge'] = ctx => { pavingHD(ctx); px(ctx, 0, 29, '#a68d59', 32, 1); px(ctx, 0, 30, '#796d47', 32, 2); };
+
+function floorHD(ctx, variant = 0) {
+  px(ctx, 0, 0, '#63472f', 32, 32);
+  for (let row = 0; row < 4; row++) {
+    const y = row * 8, joint = (row % 2 ? 23 : 9);
+    px(ctx, 0, y, row % 2 ? '#947047' : '#9b754a', 32, 7);
+    px(ctx, 0, y, '#af8856', 32, 1);
+    px(ctx, 0, y + 6, '#805b39', 32, 1);
+    px(ctx, joint, y + 1, '#62442c', 1, 6);
+    px(ctx, joint + 1, y + 1, '#a17d50', 1, 6);
+    const gx = (row * 7 + variant * 11 + 3) % 22;
+    px(ctx, gx, y + 3, '#a48051', 8, 1);
+    px(ctx, gx + 2, y + 4, '#8c653f', 9, 1);
+    px(ctx, gx + 5, y + 3, '#88613c', 3, 1);
+    px(ctx, joint - 2, y + 2, '#624b32'); px(ctx, joint + 3, y + 5, '#695037');
+  }
+}
+HD['t.floor.wood'] = ctx => floorHD(ctx);
+HD['t.floor.wood.a'] = ctx => floorHD(ctx, 1);
+HD['t.floor.rug'] = ctx => {
+  // Adjacent authored rug cells form one carpet rather than framed placemats.
+  px(ctx, 0, 0, '#8f6048', 32, 32);
+  for (let y = 0; y < 32; y += 2) px(ctx, 0, y, '#95684d', 32, 1);
+  for (let y = -16; y < 48; y += 16) for (let x = -16; x < 48; x += 16) {
+    const cx = x + 8, cy = y + 8;
+    for (let j = -7; j <= 7; j++) {
+      const half = 7 - Math.abs(j);
+      px(ctx, cx - half, cy + j, '#b0855b');
+      px(ctx, cx + half, cy + j, '#b0855b');
+    }
+    px(ctx, cx - 1, cy - 1, '#bb9365', 3, 3);
+    px(ctx, cx, cy, '#d1ac7b');
+  }
+};
+
+function wallHD(ctx, top = false) {
+  px(ctx, 0, 0, '#674b34', 32, 32);
+  for (let y = 0; y < 32; y += 8) {
+    px(ctx, 0, y, '#8b6640', 32, 1);
+    px(ctx, 0, y + 1, '#775437', 32, 5);
+    px(ctx, 0, y + 6, '#58422e', 32, 2);
+    px(ctx, 5 + (y % 7), y + 3, '#7f5b38', 11, 1);
+    px(ctx, 16 + (y % 5), y + 4, '#5f442d', 6, 1);
+  }
+  if (top) {
+    px(ctx, 0, 0, '#ab8050', 32, 2); px(ctx, 0, 2, '#745033', 32, 5);
+    px(ctx, 0, 7, '#392f24', 32, 3); px(ctx, 0, 10, '#56402c', 32, 2);
+  }
+}
+HD['t.iwall.plank'] = ctx => wallHD(ctx);
+HD['t.iwall.top'] = ctx => wallHD(ctx, true);
+HD['t.iwall.window'] = ctx => {
+  wallHD(ctx);
+  panelBox(ctx, 3, 4, 26, 23, OAK);
+  px(ctx, 6, 7, '#5e8d8b', 20, 16);
+  px(ctx, 6, 7, '#aad1bf', 20, 3);
+  px(ctx, 6, 10, '#80b1a6', 20, 4);
+  px(ctx, 6, 17, '#477775', 20, 6);
+  // Leaf silhouettes outside and angled reflected daylight on the glass.
+  px(ctx, 8, 19, '#477752', 5, 4); px(ctx, 10, 16, '#678e5a', 3, 4);
+  px(ctx, 21, 15, '#678d59', 5, 8);
+  for (let i = 0; i < 5; i++) px(ctx, 8 + i, 13 - i, '#c0d9c7');
+  px(ctx, 15, 7, '#61432e', 2, 16); px(ctx, 6, 15, '#61432e', 20, 2);
+  px(ctx, 15, 7, '#b68c58', 1, 16); px(ctx, 6, 15, '#ae8250', 20, 1);
+  px(ctx, 2, 25, '#b88c55', 28, 2); px(ctx, 2, 27, '#4c3928', 28, 2);
+};
+
+function fencePostHD(ctx, x = 13, y = 4) {
+  px(ctx, x - 2, 28, '#465532', 9, 3);
+  px(ctx, x, y + 1, '#4e3b26', 7, 25 - y);
+  px(ctx, x, y, '#a98246', 5, 24 - y);
+  px(ctx, x, y, '#d1b174', 5, 2); px(ctx, x, y + 2, '#b49156', 1, 21 - y);
+  px(ctx, x + 3, y + 5, '#806039', 1, 14 - y);
+  px(ctx, x + 1, y + 9, '#6d5030', 2, 1);
+  px(ctx, x + 1, y + 7, '#d0a567');
+}
+HD['t.fence.h'] = ctx => {
+  for (const y of [11, 22]) {
+    px(ctx, 0, y, '#baa16a', 32, 2); px(ctx, 0, y + 2, '#947344', 32, 3);
+    px(ctx, 0, y + 5, '#543f2a', 32, 1);
+    px(ctx, 4, y + 3, '#aa8750', 7, 1); px(ctx, 23, y + 2, '#6c5130', 5, 1);
+  }
+  fencePostHD(ctx);
+};
+HD['t.fence.v'] = ctx => {
+  px(ctx, 14, 0, '#ba9960', 2, 32); px(ctx, 16, 0, '#957242', 3, 32); px(ctx, 19, 0, '#543f2a', 2, 32);
+  fencePostHD(ctx, 12, 5);
+};
+HD['t.fence.post'] = ctx => fencePostHD(ctx);
+HD['t.fence.gate'] = ctx => {
+  px(ctx, 1, 8, '#55412b', 30, 22);
+  for (let x = 3; x < 30; x += 5) {
+    px(ctx, x, 9, '#997540', 4, 18); px(ctx, x, 9, '#bf995c', 1, 18);
+    px(ctx, x + 3, 11, '#76582f', 1, 16);
+  }
+  px(ctx, 3, 11, '#b8975a', 26, 3); px(ctx, 3, 24, '#755731', 26, 3);
+  for (let i = 0; i < 22; i++) px(ctx, 5 + i, 24 - Math.floor(i * .5), '#a7854c', 2, 2);
+  fencePostHD(ctx, 0, 3); fencePostHD(ctx, 26, 3);
+  px(ctx, 22, 19, '#544f38', 3, 3); px(ctx, 22, 19, '#d5b879', 2, 1);
+};
+
+function lampHD(ctx, lit = false, frame = 0) {
+  px(ctx, 21, 3, '#55402b', 4, 28); px(ctx, 21, 3, '#a1814a', 1, 26);
+  px(ctx, 19, 29, '#574329', 8, 2);
+  px(ctx, 10, 3, '#493b2c', 14, 3); px(ctx, 11, 3, '#b3985e', 11, 1);
+  px(ctx, 11, 5, '#493b2c', 1, 4);
+  px(ctx, 8, 9, '#3e3929', 8, 2); px(ctx, 7, 11, '#8f7949', 10, 2);
+  px(ctx, 8, 13, '#59472d', 8, 10);
+  px(ctx, 9, 13, lit ? '#f6d581' : '#d4ba7a', 6, 8);
+  px(ctx, 9, 14, lit ? '#fff0af' : '#ece0a0', 2, 5);
+  px(ctx, 12, 13, '#8c6a36', 1, 8);
+  px(ctx, 8, 22, '#443b2a', 8, 2); px(ctx, 10, 24, '#84633a', 4, 1);
+  if (lit) { ctx.globalAlpha = frame ? .12 : .09; ellipse(ctx, 12, 17, 11, 12, '#ffdc88'); ctx.globalAlpha = 1; }
+}
+HD['t.lamp'] = ctx => lampHD(ctx);
+HD['t.lamp.lit'] = (ctx, w, h, frame) => lampHD(ctx, true, frame);
+
+function bookcaseHD(ctx, books = true) {
+  panelBox(ctx, 2, 2, 28, 29, OAK);
+  px(ctx, 5, 5, '#3f3328', 22, 22);
+  for (const y of [14, 25]) {
+    if (books) {
+      let x = 6;
+      for (let i = 0; i < 6; i++) {
+        const col = ['#96734d', '#78856a', '#527d7b', '#b89b61', '#8c5b42', '#936c67'][(i + y) % 6];
+        const height = 6 + i % 3;
+        px(ctx, x, y - height, shade(col, -.24), 3, height);
+        px(ctx, x, y - height, col, 2, height - 1);
+        px(ctx, x, y - 2, '#c4a572', 2, 1);
+        x += 3 + i % 2;
+      }
+    }
+    px(ctx, 4, y, '#c09558', 24, 1); px(ctx, 4, y + 1, '#745134', 24, 2);
+  }
+  px(ctx, 3, 29, '#3d3125', 27, 2);
+}
+HD['t.shelf'] = ctx => bookcaseHD(ctx, false);
+HD['t.shelf.books'] = ctx => bookcaseHD(ctx);
+
+function tableHD(ctx, set = false) {
+  for (const x of [5, 24]) { px(ctx, x, 21, '#4e3a28', 4, 9); px(ctx, x, 21, '#926942', 1, 8); }
+  panelBox(ctx, 2, 5, 28, 19, OAK);
+  px(ctx, 3, 7, '#b88a51', 26, 12); px(ctx, 3, 19, '#8e6339', 26, 3);
+  for (const y of [11, 17]) { px(ctx, 4, y, '#8c673d', 24, 1); px(ctx, 6, y - 2, '#c0955a', 11, 1); }
+  if (set) {
+    for (const x of [10, 22]) {
+      ellipse(ctx, x, 13, 5, 3.2, '#71523b'); ellipse(ctx, x, 12, 5, 3.2, '#d8c9a3'); ellipse(ctx, x, 12, 3, 1.8, '#eee0b9');
+    }
+    px(ctx, 8, 11, '#c58a49', 4, 2); px(ctx, 9, 10, '#e4b979', 2, 1);
+    px(ctx, 21, 11, '#719452', 3, 2); px(ctx, 22, 11, '#b1b568');
+    px(ctx, 15, 8, '#6b8e89', 3, 5); px(ctx, 15, 8, '#b2c9b9', 3, 1); px(ctx, 15, 9, '#87ada2', 1, 3);
+  }
+}
+HD['t.table'] = ctx => tableHD(ctx);
+HD['t.table.set'] = ctx => tableHD(ctx, true);
+HD['t.counter'] = ctx => {
+  px(ctx, 0, 6, '#4f3b27', 32, 26);
+  px(ctx, 0, 6, '#b68c53', 32, 7); px(ctx, 0, 6, '#d6ae70', 32, 1);
+  px(ctx, 0, 9, '#c3995c', 32, 1); px(ctx, 0, 12, '#694a30', 32, 2);
+  for (const x of [1, 17]) {
+    panelBox(ctx, x, 15, 14, 14, OAK);
+    px(ctx, x + 3, 18, '#7d5735', 8, 8); px(ctx, x + 3, 18, '#61442c', 8, 1);
+    px(ctx, x + 10, 21, '#d2ad68', 2, 1);
+  }
+  px(ctx, 0, 30, '#392e22', 32, 2);
+};
+
+function hearthHD(ctx, frame = 0, lit = true) {
+  px(ctx, 0, 0, '#6c6955', 32, 32);
+  for (let row = 0; row < 5; row++) for (let x = row % 2 ? -5 : 0; x < 32; x += 11) {
+    px(ctx, x + 1, row * 7, '#9c967b', 9, 6); px(ctx, x + 2, row * 7, '#b5ab88', 7, 1);
+    px(ctx, x + 2, row * 7 + 5, '#777660', 8, 1);
+  }
+  px(ctx, 4, 10, '#453d2d', 24, 21); px(ctx, 6, 12, '#262820', 20, 18);
+  panelBox(ctx, 1, 6, 30, 5, OAK);
+  px(ctx, 3, 29, '#b3a07b', 26, 2); px(ctx, 2, 31, '#6a5b41', 28, 1);
+  if (lit) {
+    ellipse(ctx, 16, 24, 9, 5, '#a1592d');
+    for (const [x, y, high] of [[10, 26, 9], [16, 27, 13], [22, 26, 8]]) {
+      const shift = (x + frame) % 3;
+      ellipse(ctx, x, y - high / 2, 3.4, high / 2, '#cf7a36');
+      ellipse(ctx, x - 1, y - high / 2 + shift, 2.4, high / 2 - 1, '#edb357');
+      ellipse(ctx, x - 1, y - 3, 1.4, 3, '#ffe5a0');
+    }
+    px(ctx, 14 + frame, 12 - frame, '#e5ae56');
+  }
+  for (const [x, y] of [[8, 27], [15, 28], [20, 27]]) { px(ctx, x, y, '#3c3025', 6, 2); px(ctx, x, y, '#775033', 4, 1); }
+}
+HD['t.hearth.lit'] = (ctx, w, h, frame) => hearthHD(ctx, frame);
+HD['t.hearth.cold'] = ctx => hearthHD(ctx, 0, false);
+
+function leafyBushHD(ctx, berry = false) {
+  contactShadow(ctx, 16, 28, 13, 3, { alpha: .3, color: '#31412b' });
+  const ramp = ['#adbd66', '#89a557', '#698c47', '#4d703c', '#34532f'];
+  for (const [x, y, rx, ry] of [[16, 18, 14, 9], [8, 16, 7, 7], [23, 14, 7, 7], [15, 10, 9, 7]]) {
+    shadedBlob(ctx, x, y, rx, ry, ramp, { edge: .15 });
+  }
+  for (const [x, y] of [[5, 14], [9, 9], [15, 6], [19, 12], [24, 11], [10, 19], [18, 20], [24, 20]]) {
+    px(ctx, x, y, '#9fb562', 3, 1); px(ctx, x + 1, y - 1, '#b6c57a', 2, 1);
+    px(ctx, x + 2, y + 3, '#426337', 3, 1); px(ctx, x + 3, y + 4, '#3b5c34', 2, 1);
+  }
+  if (berry) for (const [x, y] of [[8, 13], [19, 9], [24, 18], [14, 22]]) {
+    px(ctx, x, y, '#7f4c3e', 3, 3); px(ctx, x, y, '#ca785a', 2, 2); px(ctx, x, y, '#e9ac80');
+  }
+}
+HD['t.bush'] = ctx => leafyBushHD(ctx);
+HD['t.bush.berry'] = ctx => leafyBushHD(ctx, true);
+HD['t.rock.small'] = ctx => rockHD(ctx, false);
+HD['t.rock.big'] = ctx => rockHD(ctx, true);
+function rockHD(ctx, big) {
+  const rx = big ? 13 : 10, ry = big ? 10 : 6, cy = big ? 17 : 23;
+  contactShadow(ctx, 17, 29, rx, 3, { alpha: .3, color: '#354a2c' });
+  shadedBlob(ctx, 16, cy, rx, ry, ['#c3bda0', '#a6a78b', '#8b937b', '#6f7c63', '#4c6150'], { edge: .15 });
+  for (const [x, y, w] of [[10, cy - ry + 3, 7], [8, cy - ry + 5, 4], [19, cy + 2, 5]]) {
+    px(ctx, x, y, '#b7b89b', w, 1);
+    px(ctx, x + 1, y + 1, '#a1a58a', w - 2, 1);
+  }
+  px(ctx, 22, cy, '#78836d', 1, 5); px(ctx, 23, cy + 4, '#64745d', 3, 1);
+  if (big) {
+    px(ctx, 7, cy + 7, '#648146', 7, 2); px(ctx, 8, cy + 6, '#8c9d55', 5, 1);
+    px(ctx, 10, cy + 5, '#a2ae65', 2, 1); px(ctx, 13, cy + 8, '#4b6b38', 4, 2);
+  }
+}
+HD['t.mushroom'] = ctx => {
+  contactShadow(ctx, 16, 29, 12, 2.5, { alpha: .25, color: '#3a4c2c' });
+  for (const [x, y, r] of [[9, 14, 7], [23, 23, 5]]) {
+    px(ctx, x - 2, y + 2, '#947f57', 5, 9);
+    px(ctx, x - 2, y + 2, '#e5d3a6', 3, 8);
+    px(ctx, x - 2, y + 8, '#c5b68b', 3, 2);
+    shadedBlob(ctx, x, y, r, r * .6, ['#e8b482', '#c9875c', '#a96245', '#7c4937', '#634333'], { edge: .2 });
+    px(ctx, x - r + 1, y + 2, '#d5b58a', r * 2 - 2, 1);
+    px(ctx, x - 3, y - 2, '#f3dfb3', 3, 1); px(ctx, x + 2, y - 1, '#e3c79e', 2, 2);
+  }
+};
+HD['t.plant.pot'] = ctx => {
+  contactShadow(ctx, 16, 30, 8, 2, { alpha: .22 });
+  px(ctx, 10, 22, '#8f5740', 12, 8); px(ctx, 11, 23, '#c1875e', 8, 6); px(ctx, 11, 23, '#d59b6c', 2, 5);
+  panelBox(ctx, 8, 20, 16, 4, ['#d1a077', '#b7835e', '#946448', '#664834']);
+  px(ctx, 15, 8, '#41643b', 2, 13);
+  const leaves = ['#b4bc6c', '#8fa459', '#688b4a', '#486c3a'];
+  for (const [x, y, rx, ry] of [[9, 12, 6, 3], [22, 15, 6, 3], [14, 7, 5, 4], [23, 7, 5, 3], [10, 17, 5, 3]]) {
+    shadedBlob(ctx, x, y, rx, ry, leaves, { edge: .05, noRim: true });
+    px(ctx, x - 2, y - 1, '#a4b66a', 4, 1);
+  }
+};
+HD['t.bed.head'] = ctx => {
+  panelBox(ctx, 2, 0, 28, 10, OAK);
+  px(ctx, 4, 8, '#d2c7a4', 24, 13); px(ctx, 5, 8, '#e8dfbf', 22, 11);
+  panelBox(ctx, 7, 9, 18, 8, ['#fff0ce', '#ede0b8', '#cab995', '#ab987b']);
+  px(ctx, 4, 21, '#547d79', 24, 11); px(ctx, 4, 21, '#93b2a0', 24, 2);
+  px(ctx, 4, 26, '#72978c', 24, 1); px(ctx, 10, 23, '#658f84', 2, 9); px(ctx, 23, 23, '#3d645f', 3, 9);
+  px(ctx, 2, 8, '#67472f', 2, 24); px(ctx, 28, 8, '#4e3b2b', 2, 24);
+};
+HD['t.bed.foot'] = ctx => {
+  px(ctx, 4, 0, '#547d79', 24, 25);
+  for (const y of [5, 15]) { px(ctx, 4, y, '#71978b', 24, 1); px(ctx, 4, y + 1, '#4a716d', 24, 1); }
+  px(ctx, 10, 0, '#658f84', 2, 24); px(ctx, 23, 0, '#3d645f', 3, 24);
+  px(ctx, 5, 21, '#72968a', 22, 3); px(ctx, 5, 24, '#365b56', 22, 2);
+  px(ctx, 2, 0, '#67472f', 2, 27); px(ctx, 28, 0, '#4e3b2b', 2, 27);
+  panelBox(ctx, 2, 26, 28, 5, OAK);
+};
+
 export function register() {
   for (const name of TILES) {
     const fn = TP[name];
     if (!fn) { console.warn('[tiles] no painter for', name); continue; }
-    Atlas.defineAnim(name, 16, 16, ANIM_TILES[name] || 1, fn);
+    if (HD[name]) Atlas.defineHD(name, 16, 16, 2, HD[name], ANIM_TILES[name] || 1);
+    else Atlas.defineAnim(name, 16, 16, ANIM_TILES[name] || 1, fn);
   }
   for (const fam of AUTOTILE) {
     for (let m = 0; m < 16; m++) {
-      Atlas.define(`t.${fam}.m${m}`, 16, 16, ctx => autotileTile(fam, m, ctx));
+      if (fam === 'path' || fam === 'trail') Atlas.defineHD(`t.${fam}.m${m}`, 16, 16, 2, ctx => pathHD(ctx, m, fam === 'trail'));
+      else if (fam === 'floor') Atlas.defineHD(`t.${fam}.m${m}`, 16, 16, 2, ctx => floorHD(ctx));
+      else Atlas.define(`t.${fam}.m${m}`, 16, 16, ctx => autotileTile(fam, m, ctx));
     }
-    if (!Atlas.has(`t.${fam}`)) Atlas.define(`t.${fam}`, 16, 16, ctx => autotileTile(fam, 15, ctx));
+    if (!Atlas.has(`t.${fam}`)) {
+      if (fam === 'path' || fam === 'trail') Atlas.defineHD(`t.${fam}`, 16, 16, 2, ctx => pathHD(ctx, 15, fam === 'trail'));
+      else if (fam === 'floor') Atlas.defineHD(`t.${fam}`, 16, 16, 2, ctx => floorHD(ctx));
+      else Atlas.define(`t.${fam}`, 16, 16, ctx => autotileTile(fam, 15, ctx));
+    }
   }
 }

@@ -100,6 +100,19 @@ class Sheet {
   /** Patch of encounter grass with a soft edge. */
   meadowPatch(cx, cy, rx, ry, seed = 41) { return this.blob(cx, cy, rx, ry, '"', { seed, wobble: 0.8 }); }
 
+  /** Authored flower drifts: a soft clump, with room to walk and build through it. */
+  flowers(cx, cy, rx, ry, seed, bloom = '*') {
+    for (let y = Math.floor(cy - ry); y <= cy + ry; y++) {
+      for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
+        if (!['.', ',', '*', '%', '`'].includes(this.get(x, y))) continue;
+        const d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
+        if (d + hash2(x, y, seed) * 0.6 > 1.1) continue;
+        this.set(x, y, hash2(x, y, seed + 1) < 0.42 ? bloom : ',');
+      }
+    }
+    return this;
+  }
+
   /** Fence run. Corners get posts. */
   fence(x, y, w, h) {
     for (let i = x; i < x + w; i++) { this.set(i, y, '-'); this.set(i, y + h - 1, '-'); }
@@ -157,6 +170,37 @@ function villageRows() {
 
   s.scatter([',', '*', '`', '%'], 0.14, { seed: 31, area: { x: 2, y: 2, w: 36, h: 30 } });
   s.set(12, 7, 'B'); s.set(13, 8, 'b'); s.set(34, 12, 'O'); s.set(35, 14, 'o');
+
+  // Three small properties along the north lane. Their fences stop beside the
+  // doors, and the porch approaches remain clear even as the settlement grows.
+  for (const [left, right, door] of [[4, 9, 6], [15, 20, 17], [25, 30, 27]]) {
+    s.hline(left, 11, right - left + 1, '-');
+    s.set(door, 11, 'p'); s.set(door + 1, 11, 'p');
+    s.set(left, 10, 'F'); s.set(right, 10, 'F');
+    s.flowers(left - 1, 8, 1.8, 2.1, 301 + left, '%');
+    s.flowers(right + 1, 8, 1.5, 2, 307 + right);
+  }
+  s.set(18, 11, 'p'); s.set(28, 11, 'p'); // Gran and the smith greet you at their gates.
+  s.set(8, 9, 'M'); s.set(19, 9, 'P'); s.set(30, 9, 'X');
+  s.set(4, 12, 'l'); s.set(30, 12, 'l');
+
+  // Garden rooms soften the boundary, while the centre stays available for the
+  // player's houses. All the flowers inside the plot band are non-solid.
+  for (const [x, y] of [[3, 13], [6, 14], [3, 19], [35, 6], [35, 16], [35, 28],
+    [2, 4], [9, 3], [13, 3], [21, 4], [24, 2], [31, 4], [34, 2]]) s.set(x, y, 'T');
+  for (const [x, y] of [[5, 15], [4, 21], [36, 9], [35, 18]]) s.set(x, y, 'b');
+  for (const [x, y] of [[4, 16], [7, 15], [35, 10], [34, 29]]) s.set(x, y, 'm');
+  for (const [x, y, rx, ry, seed] of [
+    [7, 12, 3, 1.5, 331], [7, 22, 3, 2, 337], [13, 21, 3, 2, 347],
+    [16, 26, 3, 2, 349], [25, 24, 3, 1.5, 353], [29, 28, 3, 2, 359],
+    [16, 30, 3, 1.5, 367], [34, 18, 3, 2, 373], [10, 28, 2, 2, 379],
+  ]) s.flowers(x, y, rx, ry, seed, seed % 3 ? '*' : '%');
+  s.hline(17, 32, 3, '-'); s.hline(22, 32, 3, '-');
+  s.set(19, 31, 'l'); s.set(23, 31, 'l');
+  s.set(30, 22, 'V'); s.set(36, 21, 'S');
+  // The established houses have room for a family. Their front door tiles stay
+  // exactly where older saves and their interior return warps expect them.
+  s.rect(4, 7, 4, 3, '.'); s.rect(15, 7, 4, 3, '.'); s.rect(25, 7, 5, 3, '.');
   return s.rows();
 }
 
@@ -183,6 +227,17 @@ function meadowRows() {
   s.set(24, 24, 'L'); s.set(27, 22, 'u'); s.set(8, 22, 'O');
   s.set(18, 3, 'I'); s.set(21, 12, 'i');
   s.scatter([',', '*', '`', 'm'], 0.13, { seed: 71, area: { x: 2, y: 2, w: 34, h: 28 } });
+  // A readable verge frames the long path: flowers and mushrooms cluster beside
+  // landmarks instead of being spread evenly over every open tile.
+  for (const [x, y, rx, ry, seed] of [
+    [16, 4, 2, 3, 401], [22, 13, 2.5, 3, 409], [17, 22, 1.5, 3, 419],
+    [6, 21, 4, 2, 421], [29, 20, 4, 1.5, 431], [23, 28, 2, 2, 433],
+  ]) s.flowers(x, y, rx, ry, seed, seed % 3 ? '*' : '%');
+  s.set(15, 3, 'T'); s.set(3, 22, 'T'); s.set(22, 25, 'T');
+  s.set(16, 6, 'm'); s.set(17, 7, 'm'); s.set(4, 24, 'm');
+  s.set(17, 2, 'l'); s.set(20, 19, 'l');
+  s.hline(4, 12, 5, '-'); s.hline(10, 12, 6, '-'); s.set(9, 12, 'A');
+  s.set(16, 13, 'b'); s.set(3, 13, 'b');
   return s.rows();
 }
 
@@ -253,6 +308,11 @@ function riversideRows() {
   s.set(24, 6, 'O'); s.set(26, 8, 'o'); s.set(6, 20, 'L');
   s.grove(22, 15, 10, 8, { density: 0.4, seed: 113 });
   s.scatter([',', '*', '`'], 0.12, { seed: 127, area: { x: 2, y: 2, w: 32, h: 22 } });
+  s.flowers(10, 14, 2.5, 2, 451).flowers(23, 10, 2, 2, 457, '%');
+  s.flowers(9, 21, 3, 2, 461).flowers(25, 4, 3, 1.5, 463, '%');
+  s.set(12, 11, 'l'); s.set(21, 11, 'l');
+  s.set(11, 7, 'K'); s.set(10, 6, 'm'); s.set(12, 9, 'b');
+  s.set(4, 17, 'T'); s.set(7, 19, 'T');
   return s.rows();
 }
 
@@ -261,43 +321,43 @@ function riversideRows() {
 // while keeping a thin cinematic edge instead of floating in a grass/void margin.
 const HOME = [
   '^^^^^^^^^^^^^^^^^^^^',
-  ']E]]]]]]U]]]]]]]]]E]',
-  ']]5]]]7]]]]J]]]]R]]]',
-  ']]6]]]7]]]Q]]]]]G]]]',
-  ']________314_______]',
-  ']_______rrrrr______]',
-  ']_______rrrrr______]',
-  ']_Z__J_______J__9__]',
-  ']_!_R__________R_X_]',
-  ']__7_____________J_]',
+  ']E]]]]]U]]]]]]]]]E]]',
+  ']_5_7______R_88988_]',
+  ']_6_7____rrrrr__G__]',
+  ']___R____rQrrr_____]',
+  ']_7______314rr_____]',
+  ']_!_Q____rrrrr___J_]',
+  ']_Z_2____________X_]',
+  ']__R___________R___]',
+  ']_JJ7__________JJJ_]',
   ']]]]]]]]]d]]]]]]]]]]',
 ];
 
 const GRANHOUSE = [
   '^^^^^^^^^^^^^^^^^^^^',
   ']E]]]]]]]U]]]]]]]]E]',
-  ']]7]]]7]]]G]]]]J]]]]',
-  ']]7]]]7]]]G]]]]J]]]]',
-  '[___Q_________Q____[',
-  '[__314_______314___[',
+  '[_7_R___J_G___J_7__[',
+  '[_7_____rrr_____7__[',
+  '[___Q___rrr___Q____[',
+  '[__314__rrr__314___[',
   '[_______rrrr_______[',
   '[_!_____________5__[',
-  '[__R____________6__[',
-  '[__________________[',
+  '[__R____rrr_____6__[',
+  '[_7J____rrr___R_J__[',
   '[[[[[[[[[d[[[[[[[[[[',
 ];
 
 const WORKSHOP = [
   '^^^^^^^^^^^^^^^^^^^^',
   ']E]]]]]]]U]]]]]]]]E]',
-  ']]a]]]88888]]]]X]]]]',
-  ']]y]]]8]]]8]]]]]G]]]',
-  ']_____88888________]',
+  ']_a_X_88888___J_X__]',
+  ']_y___8___8_____G__]',
+  ']_____88888_____X__]',
   ']___Q_________Z____]',
-  ']___2________!_____]',
+  ']___2___rrrr_!_____]',
   ']_______rrrr_______]',
-  ']___R__________R___]',
-  ']__________________]',
+  ']_X_R__________R_X_]',
+  ']______J___J_______]',
   ']]]]]]]]]d]]]]]]]]]]',
 ];
 
@@ -308,9 +368,9 @@ export const MAPS = {
     rows: villageRows(),
     // Authored buildings that predate the player. Player-built ones come from village.js.
     structures: [
-      { sprite: 'b.cottage.t2', x: 5, y: 8, w: 2, h: 2, overhang: 1, door: { x: 6, y: 9 }, to: 'home' },
-      { sprite: 'b.infirmary.t2', x: 16, y: 8, w: 2, h: 2, overhang: 1, door: { x: 17, y: 9 }, to: 'granhouse' },
-      { sprite: 'b.workshop.t2', x: 26, y: 8, w: 3, h: 2, overhang: 1, door: { x: 27, y: 9 }, to: 'workshop' },
+      { sprite: 'b.cottage.authored', x: 4, y: 7, w: 4, h: 3, overhang: 2, door: { x: 6, y: 9 }, to: 'home' },
+      { sprite: 'b.infirmary.authored', x: 15, y: 7, w: 4, h: 3, overhang: 2, door: { x: 17, y: 9 }, to: 'granhouse' },
+      { sprite: 'b.workshop.authored', x: 25, y: 7, w: 5, h: 3, overhang: 2, door: { x: 27, y: 9 }, to: 'workshop' },
     ],
     warps: [
       { x: 21, y: 33, to: 'meadow', tx: 19, ty: 1, dir: 'down' },

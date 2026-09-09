@@ -733,7 +733,7 @@ export function paintBase(ctx, map, cam, view) {
         const alt = v > 0.86 ? 't.grass.c' : v > 0.68 ? 't.grass.b' : v > 0.42 ? 't.grass.a' : 't.grass';
         img = tileImg(alt);
       }
-      if (img) ctx.drawImage(img, sx, sy);
+      if (img) ctx.drawImage(img, sx, sy, img.logicalWidth || img.width, img.logicalHeight || img.height);
       else ctx.drawImage(groundFallback('grass', sea), sx, sy);
     }
   }
@@ -747,7 +747,7 @@ export function paintFinish(ctx, map, cam, view) {
     const name = t.mat === 'plaza' ? 't.plaza' : t.mat === 'plazaEdge' ? 't.plaza.edge'
       : t.mat === 'cobble' ? 't.cobble' : 't.gravel';
     const img = tileImg(name);
-    if (img) ctx.drawImage(img, sx, sy);
+    if (img) ctx.drawImage(img, sx, sy, img.logicalWidth || img.width, img.logicalHeight || img.height);
     else ctx.drawImage(groundFallback(t.mat, sea), sx, sy);
   }
 }
@@ -759,7 +759,7 @@ export function paintPaths(ctx, map, cam, view) {
     if (sx < -TILE || sy < -TILE || sx > view.w || sy > view.h) continue;
     let img = lv >= 2 ? tileImg(`t.path.m${t.mask}`) : null;
     if (!img) img = tileImg('t.path.m15');
-    if (img) ctx.drawImage(img, sx, sy);
+    if (img) ctx.drawImage(img, sx, sy, img.logicalWidth || img.width, img.logicalHeight || img.height);
     else ctx.drawImage(groundFallback(lv >= 3 ? 'plaza' : 'path', season()), sx, sy);
   }
 }
@@ -773,7 +773,7 @@ export function paintDecor(ctx, map, cam, view) {
     const name = d.lamp && lit ? 't.lamp.lit' : d.name;
     let img = tileImg(name, d.anim > 1 ? f % d.anim : 0);
     if (!img && d.lamp) img = tileImg('t.lamp');
-    if (img) ctx.drawImage(img, sx, sy);
+    if (img) ctx.drawImage(img, sx, sy, img.logicalWidth || img.width, img.logicalHeight || img.height);
     else ctx.drawImage(decorFallback(d.name, d.lamp && lit, f % 4), sx, sy);
   }
 }
@@ -790,11 +790,11 @@ export function drawBuilding(ctx, b, sx, sy, opts = {}) {
   if (img) {
     if (b.flip) {
       ctx.save();
-      ctx.translate(sx + img.width, sy);
+      ctx.translate(sx + (img.logicalWidth || img.width), sy);
       ctx.scale(-1, 1);
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, img.logicalWidth || img.width, img.logicalHeight || img.height);
       ctx.restore();
-    } else ctx.drawImage(img, sx, sy);
+    } else ctx.drawImage(img, sx, sy, img.logicalWidth || img.width, img.logicalHeight || img.height);
   } else {
     ctx.drawImage(buildingPlaceholder(def, tier), sx, sy);
     ctx.globalAlpha = alpha;
@@ -824,7 +824,7 @@ export function paintBuildingExtras(ctx, b, cam, view) {
     if (sx > -20 && sy > -24 && sx < view.w && sy < view.h) {
       const f = Math.floor(Loop.tick / 9);
       const img = Atlas.tryGet('fx.smoke', f % 4);
-      if (img) ctx.drawImage(img, sx - 8, sy - 8);
+      if (img) ctx.drawImage(img, sx - 8, sy - 8, img.logicalWidth || img.width, img.logicalHeight || img.height);
       else {
         const prev = ctx.globalAlpha;
         for (let i = 0; i < 3; i++) {
@@ -850,7 +850,7 @@ export function paintVillagers(ctx, map, cam, view, sortEntity) {
     const draw = (c) => {
       const sh = Atlas.tryGet('fx.shadow');
       if (sh) { const p = c.globalAlpha; c.globalAlpha = 0.5; c.drawImage(sh, sx, sy + 18); c.globalAlpha = p; }
-      if (img) c.drawImage(img, sx, sy);
+      if (img) c.drawImage(img, sx, sy, img.logicalWidth || img.width, img.logicalHeight || img.height);
       else c.drawImage(charFallback(v.who, v.dir, v.frame), sx, sy);
     };
     if (sortEntity) sortEntity(v.py + 16, draw);
@@ -875,22 +875,7 @@ export function paintLights(ctx, map, cam, view) {
     const sy = (b.y - def.overhang * 0.4) * TILE - cam.y + 8;
     if (sx < -40 || sy < -40 || sx > view.w + 40 || sy > view.h + 40) continue;
     glowAt(saveCtx, sx, sy, 12 + def.w * 5 + (b.tier || 1) * 3, '#ffca7a', (0.22 + 0.075 * (b.tier || 1)) * n);
-    // Re-light a few exact window pixels after the global night tint. The hot
-    // rectangles anchor each glow to a visible source instead of a vague halo.
-    const left = b.x * TILE - cam.x;
-    const wallY = b.y * TILE - cam.y + 5;
-    const windows = def.w >= 3 ? [7, def.w * TILE - 10] : [6, def.w * TILE - 9];
-    saveCtx.save();
-    saveCtx.globalAlpha = 0.72 + 0.24 * n;
-    for (const wx of windows) {
-      saveCtx.fillStyle = '#59351f'; saveCtx.fillRect(Math.round(left + wx - 1), Math.round(wallY - 1), 7, 7);
-      saveCtx.fillStyle = '#ffb74f'; saveCtx.fillRect(Math.round(left + wx), Math.round(wallY), 5, 5);
-      saveCtx.fillStyle = '#fff0a6'; saveCtx.fillRect(Math.round(left + wx), Math.round(wallY), 4, 1);
-    }
-    const doorX = left + def.w * TILE / 2;
-    const doorY = b.y * TILE - cam.y + 3;
-    glowAt(saveCtx, doorX, doorY, 12, '#ffd080', 0.30 * n);
-    saveCtx.restore();
+
   }
 }
 
@@ -1303,7 +1288,7 @@ const HOOKS = {
     ensureState();
     ensureLayout(map);
     const c = cam || R.camera;
-    const view = { w: R.W, h: R.H };
+    const view = { w: R.viewW, h: R.viewH };
     R.layer(LAYER.GROUND, ctx => {
       paintFinish(ctx, map, c, view);
       paintPaths(ctx, map, c, view);
@@ -1319,7 +1304,7 @@ const HOOKS = {
     ensureState();
     ensureLayout(map);
     const c = cam || R.camera;
-    const view = { w: R.W, h: R.H };
+    const view = { w: R.viewW, h: R.viewH };
     const push = sortEntity || ((y, fn) => R.sortEntity(y, fn));
     for (const b of builtList()) {
       const def = defFor(b.type);

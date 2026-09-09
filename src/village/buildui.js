@@ -360,6 +360,12 @@ function buildModeScene(params) {
     Audio.sfx('cursor', { gain: 0.5 });
   }
 
+  function centerCursor() {
+    const map = Hooks.world.currentMap?.();
+    R.worldZoom = map?.indoor ? 1 : 0.75;
+    R.centerOn(cx * TILE + (def ? def.w * 8 : 8), cy * TILE + (def ? def.h * 8 : 8), map?.bounds);
+  }
+
   async function place() {
     if (!valid.ok) { Audio.sfx('deny'); UIx.toast(valid.reason || 'It will not fit here.'); return; }
     busy = true;
@@ -399,6 +405,7 @@ function buildModeScene(params) {
       start = start || Village.plazaCentre() || { x: 21, y: 19 };
       cx = start.x; cy = start.y;
       recheck();
+      centerCursor();
     },
     exit() { document.body.classList.remove('build-active'); },
     update() {
@@ -420,8 +427,7 @@ function buildModeScene(params) {
         if (next) { cx = next.x; cy = next.y; recheck(); Audio.sfx('confirm'); }
       }
       // Keep the camera on the cursor so placement always reads in context.
-      R.centerOn(cx * TILE + (def ? def.w * 8 : 8), cy * TILE + (def ? def.h * 8 : 8),
-        Hooks.world.currentMap?.()?.bounds);
+      centerCursor();
     },
     render() {
       const cam = R.camera;

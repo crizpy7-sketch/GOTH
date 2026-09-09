@@ -11,6 +11,11 @@ const specifier = /(['"])(\.\.?\/[^'"]*\.js)\1/g;
 for (const id of names) {
   let code = await read(`src/${id}`);
   code = code.replace('__BATTLE_ART__', await asset('forest-clearing.webp'));
+  code = code.replace('__OAK_ART__', await asset('forest-oak.webp'));
+  code = code.replace('__LEAFOWL_FRONT_ART__', await asset('leafowl-front.webp'));
+  code = code.replace('__LEAFOWL_BACK_ART__', await asset('leafowl-back.webp'));
+  code = code.replace('__EMBERCUB_FRONT_ART__', await asset('embercub-front.webp'));
+  code = code.replace('__EMBERCUB_BACK_ART__', await asset('embercub-back.webp'));
   const deps = {};
   for (const match of code.matchAll(specifier)) {
     const target = posix.normalize(posix.join(posix.dirname(id), match[2]));

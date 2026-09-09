@@ -117,11 +117,11 @@ test('story guidance routes players back to Emberhollow when the character is on
 });
 
 test('exploration prompts disappear immediately below the pause and settings overlays', () => {
-  const map = { id: 'home', name: 'Your Cottage', indoor: true, npcs: [] };
+  const map = { id: 'granhouse', name: "Gran Willow's Warmhouse", indoor: true, npcs: [] };
   Scenes.push('overworld');
   HUD.draw(map);
   assert.ok(drawn.some(row => row.text.includes('interact')));
-  assert.ok(drawn.some(row => row.text === 'Find your first Guardian'));
+  assert.ok(drawn.some(row => row.text === 'Meet Gran Willow'));
   Scenes.push('pause');
   drawn.length = 0;
   HUD.draw(map);
@@ -132,6 +132,29 @@ test('exploration prompts disappear immediately below the pause and settings ove
   Scenes.pop(); Scenes.pop();
   HUD.draw(map);
   assert.ok(drawn.some(row => row.text.includes('interact')));
+});
+
+test('arrival hints expire while standing still and the journal can recall the route', () => {
+  const map = { id: 'granhouse', name: "Gran Willow's Warmhouse", indoor: true, npcs: [] };
+  Scenes.push('overworld');
+  HUD.draw(map);
+  assert.ok(drawn.some(row => row.text === 'Talk to Gran beside the table.'));
+  now = 5001;
+  drawn.length = 0;
+  HUD.draw(map);
+  assert.ok(drawn.some(row => row.text === 'Meet Gran Willow'));
+  assert.ok(!drawn.some(row => row.text === 'Talk to Gran beside the table.'));
+  Scenes.push('pause'); HUD.draw(map); Scenes.pop();
+  drawn.length = 0;
+  HUD.draw(map);
+  assert.ok(drawn.some(row => row.text === 'Talk to Gran beside the table.'));
+  drawn.length = 0;
+  HUD.draw({ id: 'home', name: 'Your Cottage', indoor: true, npcs: [] });
+  assert.ok(!drawn.some(row => row.text === 'Meet Gran Willow'), 'ordinary interiors keep their scenery clear');
+  S.settings.showHints = false;
+  drawn.length = 0;
+  HUD.draw(map);
+  assert.ok(!drawn.some(row => row.text === 'Meet Gran Willow'));
 });
 
 test('settings adjust volume and persist hints and reduced motion without leaving the menu', async () => {
@@ -205,5 +228,36 @@ test('every mission card stays inside the playfield and descriptions clear the r
     const detail = drawn.filter(row => row.x === 178 && row.y > 60 && row.y < 128);
     assert.ok(detail.every(row => row.y + 8 < 124), 'description overlaps the reward divider');
     await press('down');
+  }
+});
+
+test('touch menu arrows repeat deliberately and release when the scene layout changes', () => {
+  const oldGet = document.getElementById, oldBody = document.body;
+  const controls = new Map();
+  for (const id of ['tA', 'tB', 'tM', 'tup', 'tdown', 'tleft', 'tright']) {
+    controls.set(id, { events: new Map(), classList: { add() {}, remove() {} },
+      addEventListener(type, fn) { this.events.set(type, fn); } });
+  }
+  document.getElementById = id => controls.get(id) || null;
+  document.body = { dataset: {}, style: { setProperty() {} }, classList: { contains() { return false; } } };
+  try {
+    initInput(window);
+    Scenes.push('overworld');
+    Input.runScripted();
+    assert.equal(document.body.dataset.touchMode, 'world');
+    const downArrow = controls.get('tdown');
+    downArrow.events.get('pointerdown')({ pointerId: 1, preventDefault() {} });
+    assert.equal(Input.nav('down'), true);
+    Input.endFrame();
+    now = 359; assert.equal(Input.nav('down'), false);
+    now = 360; assert.equal(Input.nav('down'), true);
+    Scenes.push('pause');
+    Input.runScripted();
+    assert.equal(document.body.dataset.touchMode, 'menu');
+    assert.equal(Input.held('down'), false, 'held navigation cannot spill into a different scene');
+  } finally {
+    document.getElementById = oldGet; document.body = oldBody;
+    initInput(window);
+    key('keydown', 'KeyE'); key('keyup', 'KeyE'); Input.reset();
   }
 });

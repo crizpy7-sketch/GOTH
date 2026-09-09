@@ -18,6 +18,19 @@ try {
   await page.waitForFunction(()=>window.__boot?.ready);
   assert.deepEqual(await page.evaluate(()=>__game.boot.failed),[]);
   assert.deepEqual(await page.evaluate(()=>__game.boot.missing),[]);
+  const artSizes=await page.evaluate(()=>Object.fromEntries(
+    ['t.grass','c.hero.down','scene.battle','t.tree.oak'].map(name=>{
+      const image=__ATLAS__.get(name);
+      return [name,[image.width,image.height,image.logicalWidth,image.logicalHeight]];
+    })
+  ));
+  assert.deepEqual(artSizes,{
+    't.grass':[32,32,16,16],
+    'c.hero.down':[32,48,16,24],
+    'scene.battle':[640,360,320,180],
+    't.tree.oak':[144,192,48,64],
+  },'detailed assets retain their gameplay footprints');
+  assert.deepEqual(await page.locator('#screen').evaluate(c=>[c.width,c.height]),[960,540]);
   await page.locator('#veil').waitFor({state:'hidden'});
   await shot('title-desktop');
   // Native button focus must follow the highlighted keyboard selection.
@@ -42,6 +55,21 @@ try {
   await page.keyboard.press('Escape');await scene('overworld');
   await page.evaluate(()=>{__game.setClock(22);__game.setSeason('winter');});
   await page.waitForTimeout(150);await shot('world-winter-night');
+  const winterTree=await page.evaluate(()=>{
+    const source=__ATLAS__.get('t.tree.oak'), winter=__ATLAS__.get('t.tree.oak:season-winter');
+    const a=source.getContext('2d').getImageData(0,0,source.width,source.height).data;
+    const b=winter.getContext('2d').getImageData(0,0,winter.width,winter.height).data;
+    let sameAlpha=a.length===b.length, changed=0, transparent=0, visible=0;
+    for(let i=0;i<a.length;i+=4){
+      if(a[i+3]!==b[i+3]) sameAlpha=false;
+      if(a[i+3] && (a[i]!==b[i] || a[i+1]!==b[i+1] || a[i+2]!==b[i+2])) changed++;
+      if(a[i+3]) visible++;else transparent++;
+    }
+    return {size:[winter.width,winter.height,winter.logicalWidth,winter.logicalHeight],sameAlpha,changed,transparent,visible};
+  });
+  assert.deepEqual(winterTree.size,[144,192,48,64]);
+  assert.equal(winterTree.sameAlpha,true,'season changes preserve canopy transparency');
+  assert.ok(winterTree.changed>100 && winterTree.transparent>0 && winterTree.visible>0,'winter recolours foliage on a transparent sprite');
   await page.evaluate(()=>{__game.setClock(10);__game.setSeason('spring');__game.grantStarter('embercub');__game.goto('battle');});
   await scene('battle');await page.waitForTimeout(1800);await shot('battle');
   await page.keyboard.press('Enter');await page.waitForTimeout(150);await shot('battle-moves');
@@ -52,6 +80,18 @@ try {
   await page.evaluate(()=>__game.goto('party'));await scene('party');await shot('party');
   await page.evaluate(()=>__game.goto('missions'));await scene('missions');await shot('missions');
   await page.evaluate(()=>__game.goto('village'));await scene('village');await shot('village');
+  await page.evaluate(()=>__game.goto('overworld',{map:'village',x:22,y:24}));await scene('overworld');
+  const placementCamera=await page.evaluate(async()=>{
+    const {R}=await import(window.__MODULE_URLS['core/renderer.js']);
+    R.worldZoom=1; // The village board uses the UI camera before placement opens.
+    __game.push('build',{type:'cottage'});
+    return {...R.camera};
+  });
+  await page.waitForTimeout(120);
+  assert.deepEqual(await page.evaluate(async()=>({...((await import(window.__MODULE_URLS['core/renderer.js'])).R.camera)})),
+    placementCamera,'placement opens at the correct camera scale without a first-frame jump');
+  await shot('placement');
+  await page.keyboard.press('Escape');await scene('overworld');
   assert.equal(await page.evaluate(()=>__game.save()),true);
   const saved=await page.evaluate(()=>({party:__game.state.party.length,steps:__game.state.stats.steps}));
   await page.reload();await page.waitForFunction(()=>__boot?.ready);
@@ -59,6 +99,9 @@ try {
   assert.deepEqual(await page.evaluate(()=>({party:__game.state.party.length,steps:__game.state.stats.steps})),saved);
   await page.getByRole('button',{name:'Continue journey'}).click();await scene('overworld');
   assert.equal(await page.locator('#titleScreen').isVisible(),false);
+  // The first FPS window includes boot and sprite realization after reload.
+  // Sample after the world has rendered long enough to replace that window.
+  await page.waitForTimeout(1400);
   const fps=await page.evaluate(()=>__game.fps);
   const mobile=await browser.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:2});
   const phone=await mobile.newPage();
@@ -73,26 +116,49 @@ try {
   assert.ok(bounds.screen.x>=0 && bounds.screen.right<=844.5 && bounds.screen.bottom<=390.5,'mobile game contained');
   const touchClear=await phone.evaluate(()=>{
     const screen=document.querySelector('#screen').getBoundingClientRect();
-    return ['tpad','tA','tB','tM'].every(id=>{
-      const r=document.getElementById(id).getBoundingClientRect();
-      return (r.right<=screen.left || r.left>=screen.right) && r.x>=0 && r.right<=innerWidth && r.y>=0 && r.bottom<=innerHeight;
+    const choices=__game.stack.at(-1)?.__params?.choices?.length || 0;
+    const dialogueTop=screen.top+(180-54-choices*12-4)/180*screen.height;
+    return ['tpad','tA','tB'].every(id=>{
+      const el=document.getElementById(id);
+      if(getComputedStyle(el).display==='none') return true;
+      const r=el.getBoundingClientRect();
+      return r.x>=screen.left && r.right<=screen.right && r.y>=screen.top && r.bottom<=dialogueTop;
     });
   });
-  assert.equal(touchClear,true,'touch controls stay outside readable game content');
+  assert.equal(touchClear,true,'fullscreen controls clear the dialogue text');
+  assert.ok(bounds.screen.height>=370,'mobile playfield uses available landscape height');
   await phone.screenshot({path:'artifacts/mobile-dialogue.png'});
   for(let i=0;i<24 && await phone.evaluate(()=>__game.scene!=='overworld');i++) {
     await phone.locator('#tA').tap();await phone.waitForTimeout(220);
   }
   await phone.waitForFunction(()=>__game.scene==='overworld');
+  await phone.waitForFunction(()=>document.body.dataset.touchMode==='world');
+  const beforeTouch=await phone.evaluate(()=>({...__game.state.player}));
+  const stick=await phone.locator('#tpad').boundingBox();
+  await phone.mouse.move(stick.x+stick.width/2,stick.y+stick.height/2);
+  await phone.mouse.down();
+  await phone.mouse.move(stick.x+stick.width/2,stick.y+stick.height-8);
+  await phone.waitForTimeout(760);
+  assert.equal(await phone.evaluate(()=>__touchStickState.running),true,'outer stick engages running');
+  await phone.mouse.up();await phone.waitForTimeout(100);
+  assert.ok(await phone.evaluate(p=>__game.state.player.x!==p.x || __game.state.player.y!==p.y,beforeTouch),'touch stick moves the player');
+  assert.equal(await phone.evaluate(()=>__touchStickState.movementDirection),null,'releasing the stick stops movement');
+  await phone.screenshot({path:'artifacts/mobile-world.png'});
   await phone.locator('#tM').tap();await phone.waitForFunction(()=>__game.scene==='pause');
+  await phone.waitForFunction(()=>document.body.dataset.touchMode==='menu');
+  assert.equal(await phone.locator('#tpad').isVisible(),false,'menu uses precise direction keys');
+  assert.equal(await phone.locator('#tdown').isVisible(),true);
   await phone.screenshot({path:'artifacts/mobile-journal.png'});
+  for(let i=0;i<5;i++) {await phone.locator('#tdown').tap();await phone.waitForTimeout(40);}
+  await phone.locator('#tA').tap();await phone.waitForFunction(()=>__game.scene==='settings');
+  await phone.locator('#tB').tap();await phone.waitForFunction(()=>__game.scene==='pause');
   await phone.locator('#tB').tap();await phone.waitForFunction(()=>__game.scene==='overworld');
   await phone.setViewportSize({width:390,height:844});await phone.waitForTimeout(300);
   assert.ok(await phone.locator('#rotateGate').isVisible(),'portrait instruction visible');
   await phone.screenshot({path:'artifacts/mobile-portrait.png'});
   await mobile.close();
   assert.deepEqual(errors,[]);
-  const result={pass:true,checks:['boot modules','native title menu','new game onboarding','movement','journal','seasons','battle','party','missions','village','save reload','continue','mobile layout','portrait gate'],fps,errors};
+  const result={pass:true,checks:['boot modules','HD asset footprints','seasonal sprite transparency','native title menu','new game onboarding','movement','journal','seasons','battle','party','missions','village','save reload','continue','mobile fullscreen layout','touch movement and running','touch menu navigation','portrait gate'],fps,errors};
   await writeFile('artifacts/browser-results.json',JSON.stringify(result,null,2));
   console.log(JSON.stringify(result,null,2));
 } catch(e) {await shot('failure');console.error('Page errors:',errors);throw e;}

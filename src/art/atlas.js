@@ -185,6 +185,12 @@ export const Atlas = {
     defs.set(name, { w, h, frames, painter, canvases: null, premium: false });
   },
 
+  // Higher-resolution art keeps its original world footprint. Painters receive
+  // physical pixel dimensions; the renderer uses the logical metadata below.
+  defineHD(name, w, h, pixelRatio, painter, frames = 1) {
+    defs.set(name, { w, h, frames, painter, pixelRatio, canvases: null, premium: true });
+  },
+
   defineSheet(name, w, h, frames, src, opts = {}) {
     if (defs.has(name)) console.warn(`[atlas] premium override "${name}"`);
     const fallback = defs.get(name) || null;
@@ -196,7 +202,7 @@ export const Atlas = {
     });
     image.src = src;
     const def = { w, h, frames, image, frameW: opts.frameW || w, frameH: opts.frameH || h,
-      canvases: null, premium: !!opts.premium, fallback };
+      canvases: null, pixelRatio: opts.pixelRatio || 1, premium: !!opts.premium, fallback };
     sheetLoads.push({ name, load, def });
     defs.set(name, def);
   },
@@ -236,15 +242,17 @@ export const Atlas = {
     // Paint or slice every raw frame first, then profile the animation as one visual unit.
     const raw = [];
     for (let f = 0; f < d.frames; f++) {
-      const c = makeCanvas(d.w, d.h);
+      const ratio = d.pixelRatio || 1;
+      const c = makeCanvas(d.w * ratio, d.h * ratio);
+      c.logicalWidth = d.w; c.logicalHeight = d.h; c.pixelRatio = ratio;
       const ctx = c.getContext('2d');
       ctx.imageSmoothingEnabled = false;
       try {
         if (d.image) {
           const sx = (f * d.frameW) % d.image.width;
           const sy = Math.floor((f * d.frameW) / d.image.width) * d.frameH;
-          ctx.drawImage(d.image, sx, sy, d.frameW, d.frameH, 0, 0, d.w, d.h);
-        } else d.painter(ctx, d.w, d.h, f);
+          ctx.drawImage(d.image, sx, sy, d.frameW, d.frameH, 0, 0, c.width, c.height);
+        } else d.painter(ctx, c.width, c.height, f);
       } catch (err) { console.error(`[atlas] source "${name}" frame ${f} failed`, err); }
       raw.push(c);
     }
@@ -281,7 +289,7 @@ export const Atlas = {
     if (defs.has(key)) return key;
     const src = defs.get(name);
     if (!src) throw new Error(`[atlas] unknown sprite "${name}"`);
-    this.defineAnim(key, src.w, src.h, src.frames, (ctx, w, h, f) => {
+    this.defineHD(key, src.w, src.h, src.pixelRatio || 1, (ctx, w, h, f) => {
       ctx.drawImage(this.get(name, f), 0, 0);
       const img = ctx.getImageData(0, 0, w, h);
       const d = img.data;
@@ -291,7 +299,7 @@ export const Atlas = {
         d[i] = out[0]; d[i + 1] = out[1]; d[i + 2] = out[2]; d[i + 3] = out[3];
       }
       ctx.putImageData(img, 0, 0);
-    });
+    }, src.frames);
     return key;
   },
 
@@ -300,12 +308,12 @@ export const Atlas = {
     const key = `${name}:sil:${color}`;
     if (defs.has(key)) return key;
     const src = defs.get(name);
-    this.defineAnim(key, src.w, src.h, src.frames, (ctx, w, h, f) => {
+    this.defineHD(key, src.w, src.h, src.pixelRatio || 1, (ctx, w, h, f) => {
       ctx.drawImage(this.get(name, f), 0, 0);
       ctx.globalCompositeOperation = 'source-in';
       ctx.fillStyle = color;
       ctx.fillRect(0, 0, w, h);
-    });
+    }, src.frames);
     return key;
   },
 

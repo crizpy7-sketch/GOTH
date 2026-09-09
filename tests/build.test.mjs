@@ -20,4 +20,6 @@ test('standalone bundle parses and preserves every source module verbatim',async
   assert.equal(seen.size,50);
   assert.ok(!html.includes('__TITLE_ART__'));
   assert.ok(!html.includes('__BATTLE_ART__'));
+  assert.ok(!html.includes('__OAK_ART__'));
+  assert.ok(!/__\w+_ART__/.test(html), 'all generated asset placeholders are embedded');
 });

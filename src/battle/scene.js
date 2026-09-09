@@ -514,7 +514,7 @@ function battleScene(params) {
       return;
     }
     if (evolving && side === 'player') return;   // the evolution overlay owns the sprite
-    const dw = img.width, dh = img.height;
+    const dw = img.logicalWidth || img.width, dh = img.logicalHeight || img.height;
     const dx = Math.round(x), dy = Math.round(y + sink);
     if (flash[side] > 0 && flash[side] % 4 < 2) {
       R.blit(img, dx, dy);

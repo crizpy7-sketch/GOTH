@@ -69,8 +69,8 @@ export function drawLighting(map) {
   if (map?.indoor) {
     // Preserve the warm timber and readable furniture while the windows/hearth
     // supply local light. A heavy full-screen tint hid the room's small details.
-    const a = Math.max(0.06, Math.min(alpha * 0.55, 0.24));
-    if (a > 0.02) R.tintScreen('#20263a', a, 'multiply');
+    const a = Math.max(0.14, Math.min(alpha * 0.55, 0.28));
+    if (a > 0.02) R.tintScreen('#3b2d28', a, 'multiply');
     return;
   }
   // Night remains visibly blue, with enough reflected light to follow roads and
@@ -92,7 +92,7 @@ export function drawWeather(map) {
   const want = reducedMotion ? (snow ? 12 : 16) : w === 'storm' ? 62 : snow ? 36 : 44;
   while (drops.length < want) {
     drops.push({
-      x: rng.float() * (R.W + 40) - 20, y: rng.float() * R.H,
+      x: rng.float() * (R.viewW + 40) - 20, y: rng.float() * R.viewH,
       v: snow ? 0.4 + rng.float() * 0.5 : 3.2 + rng.float() * 2.2,
       d: snow ? (rng.float() - 0.5) * 0.5 : -1.1,
       p: rng.float() * 6.28, f: Math.floor(rng.float() * 4),
@@ -107,8 +107,8 @@ export function drawWeather(map) {
     const far = (i % 3) === 0;
     d.y += d.v * (far ? 0.58 : 1) * (reducedMotion ? 0.45 : 1);
     d.x += (d.d + (snow ? Math.sin(d.p += 0.04) * 0.4 : 0)) * (reducedMotion ? 0.45 : 1);
-    if (d.y > R.H) { d.y = -6; d.x = rng.float() * (R.W + 40) - 20; }
-    if (d.x < -20) d.x = R.W + 10;
+    if (d.y > R.viewH) { d.y = -6; d.x = rng.float() * (R.viewW + 40) - 20; }
+    if (d.x < -20) d.x = R.viewW + 10;
     if (img) R.blit(img, d.x, d.y, { alpha: far ? (snow ? 0.38 : 0.24) : (snow ? 0.88 : 0.62) });
     else R.rect(d.x, d.y, 1, snow ? 1 : (far ? 2 : 4), snow ? '#eef6ff' : '#9fc9e8');
   }
@@ -157,12 +157,12 @@ export function drawNightGlow(map, cam) {
     // Pool the light on the ground BELOW the lamp, wide and soft. Centring a tight,
     // strong glow on the fitting itself just blows the fitting out to white.
     const x = p.x * 16 + 8 - cam.x, y = p.y * 16 + 18 - cam.y;
-    if (x < -50 || y < -50 || x > R.W + 50 || y > R.H + 50) continue;
+    if (x < -50 || y < -50 || x > R.viewW + 50 || y > R.viewH + 50) continue;
     R.glow(x, y, 38, `rgba(255,204,128,${a})`, 0.5);
   }
   for (const st of map.structures || []) {
     const x = (st.x + st.w / 2) * 16 - cam.x, y = (st.y - st.overhang / 2) * 16 - cam.y;
-    if (x < -60 || y < -60 || x > R.W + 60 || y > R.H + 60) continue;
+    if (x < -60 || y < -60 || x > R.viewW + 60 || y > R.viewH + 60) continue;
     R.glow(x, y, 22, 'rgba(255,190,104,0.26)', 0.5);
   }
 }

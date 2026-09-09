@@ -40,6 +40,38 @@ let busy = false;          // a scene/transition owns the player
 let grace = ENCOUNTER_GRACE;
 let dust = [];
 let rustle = [];
+// The companion echoes completed player steps, never a straight line toward
+// the player's current position. Two breadcrumbs are enough to preserve every
+// corner, including the exact arc of a ledge hop, without touching collision.
+let companionTrail = [];
+let doorWarping = false;
+
+function rememberCompanionStep(toX, toY, dir, hop = false) {
+  companionTrail.push({ fromX: player.x, fromY: player.y, toX, toY, dir, hop });
+  if (companionTrail.length > 2) companionTrail.shift();
+}
+
+function companionPose() {
+  if (!companionTrail.length || doorWarping) return null;
+  const progress = player.hop ? Math.min(1, player.hop.t / HOP)
+    : player.moving ? Math.min(1, player.t / player.dur) : 1;
+  const step = companionTrail[0];
+  const first = companionTrail.length === 1;
+  // Emerge gently from the player's starting tile after a warp/first meeting.
+  // The very first departure has no older traversed tile to spawn onto safely.
+  const alpha = first ? clamp((progress - .25) / .5, 0, 1) : 1;
+  if (alpha <= 0) return null;
+  const k = first ? 0 : progress;
+  const px = (step.fromX + (step.toX - step.fromX) * k) * TILE;
+  const groundY = (step.fromY + (step.toY - step.fromY) * k) * TILE;
+  const hopping = !first && step.hop && progress < 1;
+  return {
+    px, py: groundY - (hopping ? Math.sin(k * Math.PI) * 14 : 0), groundY,
+    x: Math.round(px / TILE), y: Math.round(groundY / TILE),
+    dir: step.dir, alpha, hopping,
+    moving: !first && (player.moving || !!player.hop),
+  };
+}
 
 function makePlayer() {
   return {
@@ -189,12 +221,13 @@ async function recover() {
 async function doWarp(w) {
   busy = true;
   const door = !!w.door || map.tag(player.x, player.y) === 'door';
+  doorWarping = door;
   try {
     if (door) Audio.sfx('door');
     await (door ? UIx.doorway('out') : UIx.fade('out', 12));
     await enterMap(w.to, w.tx, w.ty, w.dir || player.dir, { fade: false });
     await (door ? UIx.doorway('in') : UIx.fade('in', 12));
-  } finally { busy = false; }
+  } finally { busy = false; doorWarping = false; }
 }
 
 export async function enterMap(id, x, y, dir = 'down', { fade = true } = {}) {
@@ -209,12 +242,14 @@ export async function enterMap(id, x, y, dir = 'down', { fade = true } = {}) {
   player.x = spawn.x; player.y = spawn.y; player.dir = dir;
   player.px = spawn.x * TILE; player.py = spawn.y * TILE;
   player.fx = spawn.x; player.fy = spawn.y;
+  companionTrail = [];
   grace = ENCOUNTER_GRACE;
   dust.length = 0; rustle.length = 0;
   syncState();
   try { Hooks.missions.note('enter-map', { map: id }); } catch {}
   Bus.emit(EV.MAP_ENTERED, { map: id });
   if (map.music && Audio.hasSong(map.music)) Audio.play(map.music);
+  R.worldZoom = map.indoor ? 1 : 0.75;
   R.centerOn(player.px + 8, player.py + 8, map.bounds);
   if (fade) await UIx.fade('in', 12);
 }
@@ -285,6 +320,7 @@ function tryStep(dir) {
 
   // A ledge below you is a one-way hop down, not a wall.
   if (dir === 'down' && map.ledge(nx, ny) === 'down' && canWalk(nx, ny + 1)) {
+    rememberCompanionStep(nx, ny + 1, dir, true);
     player.hop = { fromX: player.x, fromY: player.y, toX: nx, toY: ny + 1, t: 0 };
     player.x = nx; player.y = ny + 1;
     Audio.sfx('bump', { rate: 1.6 });
@@ -294,6 +330,7 @@ function tryStep(dir) {
     if (player.bump <= 0) { Audio.sfx('bump'); player.bump = 10; }
     return false;
   }
+  rememberCompanionStep(nx, ny, dir);
   player.fx = player.x; player.fy = player.y;
   player.x = nx; player.y = ny;
   player.moving = true; player.t = 0;
@@ -383,6 +420,7 @@ function update() {
   for (let i = dust.length - 1; i >= 0; i--) if (++dust[i].t > 22) dust.splice(i, 1);
   for (let i = rustle.length - 1; i >= 0; i--) if (++rustle[i].t > 20) rustle.splice(i, 1);
 
+  R.worldZoom = map.indoor ? 1 : 0.75;
   R.centerOn(player.px + 8, player.py + 8, map.bounds);
 }
 
@@ -415,15 +453,16 @@ function worldSprite(name, frame = 0) {
 
 function drawTiles() {
   const cam = R.camera;
+  const detailedTrees = Atlas.tryGet('t.tree.oak')?.logicalWidth === 48;
   const x0 = Math.max(0, Math.floor(cam.x / TILE) - 1);
   const y0 = Math.max(0, Math.floor(cam.y / TILE) - 1);
-  const x1 = Math.min(map.w - 1, Math.ceil((cam.x + R.W) / TILE) + 1);
-  const y1 = Math.min(map.h - 1, Math.ceil((cam.y + R.H) / TILE) + 1);
+  const x1 = Math.min(map.w - 1, Math.ceil((cam.x + R.viewW) / TILE) + 1);
+  const y1 = Math.min(map.h - 1, Math.ceil((cam.y + R.viewH) / TILE) + 1);
   const frame = Math.floor(performance.now() / 180);
 
   R.layer(LAYER.GROUND, () => {
     // Outside the map edge reads as void otherwise; fill it with the map's own base.
-    R.rect(0, 0, R.W, R.H, map.indoor ? '#171019' : '#2c3a22');
+    R.rect(0, 0, R.viewW, R.viewH, map.indoor ? '#171019' : '#2c3a22');
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
         const img = worldSprite(map.ground(x, y), frame);
@@ -451,9 +490,69 @@ function drawTiles() {
   R.layer(LAYER.OVER, () => {
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
-        const img = worldSprite(map.over(x, y), frame);
+        const name = map.over(x, y);
+        if (detailedTrees && name?.startsWith('t.tree.canopy.')) continue;
+        const img = worldSprite(name, frame);
         if (img) R.blit(img, x * TILE - cam.x, y * TILE - cam.y);
       }
+    }
+  });
+}
+
+function drawTrees(cam) {
+  if (map.indoor || Atlas.tryGet('t.tree.oak')?.logicalWidth !== 48) return;
+  // Tree roots retain their authored two-tile collision. The larger artwork is
+  // sorted by those roots, so walking in front and behind reads naturally.
+  const x0 = Math.max(0, Math.floor(cam.x / TILE) - 3);
+  const y0 = Math.max(0, Math.floor(cam.y / TILE) - 2);
+  const x1 = Math.min(map.w - 1, Math.ceil((cam.x + R.viewW) / TILE) + 3);
+  const y1 = Math.min(map.h - 1, Math.ceil((cam.y + R.viewH) / TILE) + 4);
+  const img = worldSprite('t.tree.oak');
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    if (map.over(x, y) !== 't.tree.canopy.nw') continue;
+    const rootY = (y + 2) * TILE;
+    const sx = x * TILE - cam.x - 8, sy = rootY - cam.y - 64;
+    const behind = player.py + TILE < rootY
+      && player.py + TILE > rootY - 58
+      && player.px + 8 > x * TILE - 5 && player.px + 8 < x * TILE + 39;
+    R.sortEntity(rootY, () => R.blit(img, sx, sy, {alpha: behind ? 0.52 : 1}));
+  }
+}
+
+// Static furniture positions and shadow bands are prepared once. Shadow drawing
+// never reads sprite pixels or builds a silhouette during the frame loop.
+const interiorShadowCache = new WeakMap();
+const INTERIOR_FURNITURE = /^t\.(?:table(?:\.set)?|chair\.[lrud]|bed\.foot|shelf(?:\.books)?|counter|stove|hearth\.(?:lit|cold)|cabinet|plant\.pot|chest|anvil|loom|basket|pot|barrel|crate|bench)$/;
+const OAK_SHADOW_BANDS = [
+  [-15, -7, 29, 2], [-20, -5, 40, 3], [-23, -2, 46, 4],
+  [-21, 2, 42, 3], [-16, 5, 33, 2], [-10, 7, 22, 1],
+];
+const SMALL_TREE_SHADOW = [
+  [-7, -4, 14, 1], [-8, -3, 16, 2], [-9, -1, 18, 3], [-8, 2, 16, 2], [-6, 4, 12, 1],
+];
+
+function drawInteriorShadows(cam) {
+  let furniture = interiorShadowCache.get(map);
+  if (!furniture) {
+    furniture = [];
+    for (let y = 0; y < map.h; y++) for (let x = 0; x < map.w; x++) {
+      const name = map.mid(x, y);
+      if (!map.solid(x, y) || !INTERIOR_FURNITURE.test(name || '')) continue;
+      furniture.push({ x: x * TILE, y: y * TILE, narrow: /chair|plant|basket|pot/.test(name) });
+    }
+    interiorShadowCache.set(map, furniture);
+  }
+  if (!furniture.length) return;
+  R.layer(LAYER.GROUND, () => {
+    for (const item of furniture) {
+      const sx = Math.round(item.x - cam.x), sy = Math.round(item.y - cam.y);
+      if (sx < -20 || sy < -20 || sx > R.viewW || sy > R.viewH) continue;
+      const inset = item.narrow ? 3 : 0;
+      // A warm ambient footprint sits beneath the feet; the lighter extension
+      // falls down/right in the same direction as the top-left painted light.
+      R.rect(sx + 2 + inset, sy + 12, 14 - inset * 2, 4, 'rgba(44,30,20,0.12)');
+      R.rect(sx + 4 + inset, sy + 15, 13 - inset * 2, 3, 'rgba(44,30,20,0.08)');
+      R.rect(sx + 4 + inset, sy + 14, 10 - inset, 2, 'rgba(44,30,20,0.14)');
     }
   });
 }
@@ -461,16 +560,17 @@ function drawTiles() {
 function drawWorldDetail(cam) {
   // Ground dressing follows the terrain. All decoration stays below objects and
   // never changes collision, so the readable road is also the usable road.
-  if (map.indoor) return;
+  if (map.indoor) { drawInteriorShadows(cam); return; }
   const x0 = Math.max(0, Math.floor(cam.x / TILE) - 2);
   const y0 = Math.max(0, Math.floor(cam.y / TILE) - 2);
-  const x1 = Math.min(map.w - 1, Math.ceil((cam.x + R.W) / TILE) + 2);
-  const y1 = Math.min(map.h - 1, Math.ceil((cam.y + R.H) / TILE) + 2);
+  const x1 = Math.min(map.w - 1, Math.ceil((cam.x + R.viewW) / TILE) + 2);
+  const y1 = Math.min(map.h - 1, Math.ceil((cam.y + R.viewH) / TILE) + 2);
   const season = S.clock?.season || 'spring';
   const winter = season === 'winter';
   const night = isNight();
   const now = R.cinematicFx ? performance.now() / 1000 : 0;
   const clear = S.clock?.weather === 'clear';
+  const largeOak = Atlas.tryGet('t.tree.oak')?.logicalWidth === 48;
   const flowers = season === 'autumn' ? ['#efd17b', '#e69a67', '#dfba70']
     : season === 'summer' ? ['#ffdc73', '#f0a4b4', '#f5e6b7']
     : ['#f6d987', '#efb5c5', '#d0dfea'];
@@ -500,12 +600,13 @@ function drawWorldDetail(cam) {
       // rectangle per solid map cell. Pixel bands keep shadows crisp at 1x.
       if (over === 't.tree.canopy.nw' || over === 't.pine.top') {
         const oak = over === 't.tree.canopy.nw';
-        const cx = sx + (oak ? 21 : 11), cy = sy + 29;
-        const rx = oak ? 17 : 9;
-        for (let j = -4; j <= 4; j++) {
-          const half = Math.round(rx * Math.sqrt(1 - j * j / 25));
-          R.rect(cx - half, cy + j, half * 2, 1, 'rgba(32,65,45,0.12)');
+        const broad = oak && largeOak;
+        const cx = sx + (broad ? 24 : oak ? 21 : 11), cy = sy + (broad ? 34 : 29);
+        for (const [x, y, w, h] of broad ? OAK_SHADOW_BANDS : SMALL_TREE_SHADOW) {
+          R.rect(cx + (oak && !largeOak ? x * 1.7 : x), cy + y,
+            oak && !largeOak ? w * 1.7 : w, h, 'rgba(32,65,45,0.12)');
         }
+        if (broad) R.rect(sx + 10, sy + 29, 14, 3, 'rgba(25,47,33,0.16)');
       } else if (solid && mid && !/fence|wall|hedge/.test(mid)) {
         R.rect(sx + 4, sy + 13, 11, 3, 'rgba(32,65,45,0.10)');
         R.rect(sx + 6, sy + 16, 7, 1, 'rgba(32,65,45,0.07)');
@@ -540,7 +641,7 @@ function drawWorldDetail(cam) {
       const wx = (i * 113 + 31 + Math.sin(now * 0.25 + i) * 12 + periodX) % periodX;
       const wy = (i * 83 + 47 + Math.cos(now * 0.3 + i * 2) * 8 + periodY) % periodY;
       const x = Math.round(wx - cam.x), y = Math.round(wy - cam.y);
-      if (x < 0 || y < 0 || x >= R.W || y >= R.H) continue;
+      if (x < 0 || y < 0 || x >= R.viewW || y >= R.viewH) continue;
       if (night) {
         const a = 0.25 + (Math.sin(now * 1.4 + i * 3) + 1) * 0.28;
         R.rect(x, y, 1, 1, `rgba(255,230,143,${a})`);
@@ -570,13 +671,13 @@ function drawStructures(cam) {
     const img = Atlas.tryGet(st.sprite);
     const sx = st.x * TILE - cam.x;
     const sy = (st.y - st.overhang) * TILE - cam.y;
-    if (sx > R.W || sy > R.H || sx + st.w * TILE < 0) continue;
+    if (sx > R.viewW || sy > R.viewH || sx + st.w * TILE < 0) continue;
     if (img) R.layer(LAYER.GROUND, () => {
       const ctx = R.ctx;
       ctx.save();
       ctx.translate(Math.round(sx + 5), Math.round((st.y + st.h) * TILE - cam.y + 4));
       ctx.scale(1, 0.24);
-      R.silhouette(img, 0, -img.height, '#243d32', 0.18);
+      R.silhouette(img, 0, -(img.logicalHeight || img.height), '#243d32', 0.18);
       ctx.restore();
     });
     R.sortEntity((st.y + st.h) * TILE, () => {
@@ -584,6 +685,25 @@ function drawStructures(cam) {
       else R.rect(sx, sy, st.w * TILE, (st.h + st.overhang) * TILE, '#ff00ff');
     });
   }
+}
+
+function drawCompanion(cam) {
+  const lead = S.party?.[0];
+  if (!lead?.species) return;
+  const pose = companionPose();
+  if (!pose) return;
+  const frame = pose.moving ? Math.floor(player.anim / (player.running ? RUN : WALK)) % 2 : 0;
+  const img = Atlas.tryGet(`g.${lead.species}.ow`, frame);
+  if (!img) return;
+  const width = img.logicalWidth || img.width;
+  const height = img.logicalHeight || img.height;
+  const sx = pose.px - cam.x + (TILE - width) / 2;
+  const sy = pose.py - cam.y + TILE - height;
+  R.sortEntity(pose.groundY + TILE - .1, () => {
+    if (map.isGrass(pose.x, pose.y) && !pose.hopping) {
+      R.blit(img, sx, sy, { alpha: pose.alpha, clip: { x: 0, y: 0, w: width, h: Math.max(1, height - 4) } });
+    } else R.blit(img, sx, sy, { alpha: pose.alpha, flipX: pose.dir === 'left' });
+  });
 }
 
 function drawPlayer(cam) {
@@ -622,15 +742,18 @@ function drawFx(cam) {
 
 function render() {
   if (!map) return;
+  R.worldZoom = map.indoor ? 1 : 0.75;
   const cam = R.camera;
   const placing = document.body.classList.contains('build-active');
   drawTiles();
+  drawTrees(cam);
   drawWorldDetail(cam);
   drawFx(cam);
   drawStructures(cam);
   try { Hooks.village.drawSprites(map, cam, (y, fn) => R.sortEntity(y, fn)); } catch {}
   if (!placing) {
     for (const n of npcs) R.sortEntity(n.py + TILE, () => n.draw(cam));
+    drawCompanion(cam);
     drawPlayer(cam);
   }
 
