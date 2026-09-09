@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1119">
+<title>Guardians of the Hearth</title>
+<style>
+  :root {
+    color-scheme:dark;
+    --vv-left:0px;
+    --vv-top:0px;
+    --vv-width:100vw;
+    --vv-height:100vh;
+    --playfield-width:338px;
+    --playfield-height:198px;
+    --control-gap:clamp(8px,2vmin,16px);
+    --button-size:clamp(48px,13vmin,64px);
+    --menu-size:clamp(44px,11vmin,54px);
+    --pad-size:clamp(96px,28vmin,144px);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body {
+    width:100%; height:100%; min-height:100%; overflow:hidden; background:#101a21;
+    overscroll-behavior:none;
+  }
+  body {
+    position:fixed; inset:0;
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;
+    touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+  }
+  #gameViewport {
+    position:fixed;
+    left:var(--vv-left); top:var(--vv-top);
+    width:var(--vv-width); height:var(--vv-height);
+    display:grid; place-items:center;
+    padding:
+      max(6px,env(safe-area-inset-top))
+      max(6px,env(safe-area-inset-right))
+      max(6px,env(safe-area-inset-bottom))
+      max(6px,env(safe-area-inset-left));
+    overflow:hidden; isolation:isolate;
+  }
+  #playfield {
+    position:relative; z-index:1;
+    width:var(--playfield-width); height:var(--playfield-height);
+    max-width:100%; max-height:100%;
+    flex:none; opacity:1; visibility:visible;
+    transition:opacity .18s ease;
+  }
+  #stage {
+    position:absolute; inset:0; width:100%; height:100%;
+    padding:8px; border:1px solid rgba(245,200,119,.42);
+    image-rendering:pixelated;
+    background:linear-gradient(145deg,#3b2718,#130e0c 60%,#4b311c);
+    box-shadow:0 0 0 2px #090706,0 0 0 4px rgba(169,118,42,.38),
+      0 24px 70px rgba(0,0,0,.72),0 0 60px rgba(245,164,74,.08);
+  }
+  #screen {
+    display:block; width:320px; height:180px;
+    image-rendering:pixelated; image-rendering:crisp-edges;
+    background:#0b0e14; box-shadow:inset 0 0 20px rgba(0,0,0,.45);
+  }
+  #stage::before,#stage::after {
+    content:"✦"; position:absolute; color:#d9a34b; font-size:8px; opacity:.8;
+  }
+  #stage::before { left:2px; top:0; }
+  #stage::after { right:2px; bottom:0; }
+  /* ---- boot veil ---- */
+  #veil {
+    position:fixed; inset:0; z-index:50; background:#0b0e14; color:#e8dfc8;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+    padding:max(24px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right))
+      max(24px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));
+    transition:opacity .45s ease; font-size:13px; letter-spacing:.14em; text-transform:uppercase;
+  }
+  #veil.gone { opacity:0; pointer-events:none; }
+  #veil.hidden { display:none; }
+  #veil .mark { max-width:92vw; font-size:20px; line-height:1.45; text-align:center;
+    letter-spacing:.24em; color:#f5c877; text-shadow:0 2px 0 #7a4a1c; }
+  #bar { width:180px; height:4px; background:#232a38; overflow:hidden; }
+  #bar i { display:block; height:100%; width:0%; background:#f5c877; transition:width .2s ease; }
+  #veil .hint { color:#7d8899; font-size:11px; letter-spacing:.1em; }
+  #veil button {
+    font:inherit; font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+    padding:12px 26px; color:#12161f; background:#f5c877; border:0; cursor:pointer;
+    box-shadow:0 3px 0 #a9762a;
+  }
+  #veil button:active { transform:translateY(2px); box-shadow:0 1px 0 #a9762a; }
+  /* ---- touch controls: one coordinate space with the framed game ---- */
+  #touch { position:absolute; inset:0; z-index:4; display:none; pointer-events:none; }
+  body.touch #touch { display:block; }
+  #touch .pad, #touch .btn {
+    position:absolute; pointer-events:auto; border-radius:50%; touch-action:none;
+    background:rgba(232,223,200,.10); border:1px solid rgba(232,223,200,.22);
+    -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);
+    box-shadow:inset 0 1px rgba(255,255,255,.12),0 6px 18px rgba(0,0,0,.28);
+  }
+  #touch .pad {
+    left:var(--control-gap); bottom:var(--control-gap);
+    width:var(--pad-size); height:var(--pad-size);
+    box-shadow:inset 0 0 0 clamp(12px,4vmin,18px) rgba(11,14,20,.18),
+      inset 0 1px rgba(255,255,255,.12),0 6px 18px rgba(0,0,0,.28);
+  }
+  #touch .pad::before { content:''; position:absolute; inset:34%; border-radius:50%;
+    border:1px dashed rgba(245,200,119,.24); pointer-events:none; }
+  #touch .pad::after { content:'+'; position:absolute; inset:0; display:grid; place-items:center;
+    color:rgba(232,223,200,.16); font-size:74px; font-family:system-ui,sans-serif; font-weight:200; pointer-events:none; }
+  #touch .pad i { position:absolute; z-index:1; inset:0; margin:auto; width:38px; height:38px; border-radius:50%;
+    background:rgba(245,200,119,.58); box-shadow:0 3px 12px rgba(0,0,0,.32); transition:transform .045s linear; }
+  #touch .btn { width:var(--button-size); height:var(--button-size); min-width:44px; min-height:44px;
+    right:var(--control-gap);
+    display:grid; place-items:center; color:#f5c877; font-size:15px; letter-spacing:.06em; }
+  #touch .btn.a { bottom:var(--control-gap); right:calc(var(--control-gap) + var(--button-size) + 8px); }
+  #touch .btn.b { bottom:var(--control-gap); }
+  #touch .btn.m { top:var(--control-gap); bottom:auto; width:var(--menu-size); height:var(--menu-size);
+    min-width:44px; min-height:44px; font-size:12px; }
+  #touch .btn:active, #touch .btn.on { background:rgba(245,200,119,.32); }
+
+  /* Battle and placement reserve their bottom band for text and commands. Move
+     physical controls into the scenic middle so labels stay readable/tappable.
+     Start has no action in either mode, so keep it off the status/map content. */
+  body.touch.battle-active #touch .pad,
+  body.touch.build-active #touch .pad {
+    top:55%; bottom:auto; transform:translateY(-50%);
+  }
+  body.touch.battle-active #touch .btn.a,
+  body.touch.battle-active #touch .btn.b,
+  body.touch.build-active #touch .btn.a,
+  body.touch.build-active #touch .btn.b {
+    top:55%; bottom:auto; transform:translateY(-50%);
+  }
+  body.touch.battle-active #touch .btn.m,
+  body.touch.build-active #touch .btn.m { display:none; }
+
+  /* ---- intentional portrait experience for the 16:9 game ---- */
+  #rotateGate {
+    position:absolute; inset:0; z-index:8; display:none; place-items:center;
+    padding:28px; overflow:hidden; text-align:center;
+    background:
+      radial-gradient(circle at 50% 38%,rgba(141,88,55,.30),transparent 30%),
+      linear-gradient(155deg,rgba(9,11,18,.98),rgba(27,17,29,.98) 60%,rgba(8,10,15,.99));
+  }
+  #rotateGate::before {
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.22;
+    background-image:repeating-linear-gradient(90deg,transparent 0 31px,rgba(255,255,255,.025) 32px);
+  }
+  .rotate-card { position:relative; width:min(100%,360px); color:#e8dfc8; }
+  .rotate-kicker { margin-bottom:12px; color:#f5c877; font-size:10px; font-weight:800;
+    letter-spacing:.28em; text-transform:uppercase; }
+  .rotate-device {
+    position:relative; width:58px; height:92px; margin:0 auto 28px;
+    border:4px solid #f5c877; border-radius:13px;
+    box-shadow:0 0 0 2px rgba(122,74,28,.8),0 14px 36px rgba(0,0,0,.45),0 0 28px rgba(245,200,119,.16);
+    animation:turnDevice 2.8s cubic-bezier(.65,0,.25,1) infinite;
+  }
+  .rotate-device::before { content:""; position:absolute; left:50%; top:5px; width:18px; height:3px;
+    border-radius:3px; background:#f5c877; transform:translateX(-50%); opacity:.7; }
+  .rotate-device::after { content:"✦"; position:absolute; inset:11px 5px 7px; display:grid; place-items:center;
+    border:1px solid rgba(245,200,119,.38); color:#f5c877;
+    background:radial-gradient(circle,#4b2d24,#111521 72%); font-size:18px; }
+  .rotate-card h1 { color:#fff3d5; font:800 clamp(23px,7vw,32px)/1.12 Georgia,serif;
+    text-shadow:0 3px 0 #5e351d; }
+  .rotate-card p { margin:13px auto 0; max-width:290px; color:#aeb6c4; font:500 14px/1.55 system-ui,sans-serif; }
+  .rotate-rule { width:76px; height:2px; margin:20px auto 0;
+    background:linear-gradient(90deg,transparent,#d9a34b,transparent); }
+  @keyframes turnDevice {
+    0%,22% { transform:rotate(0deg); }
+    54%,88%,100% { transform:rotate(90deg); }
+  }
+  body.touch.is-portrait #playfield { opacity:0; visibility:hidden; pointer-events:none; }
+  body.touch.is-portrait #rotateGate { display:grid; }
+  @media (orientation:portrait) and (hover:none) and (pointer:coarse) {
+    #playfield { opacity:0; visibility:hidden; pointer-events:none; }
+    #rotateGate { display:grid; }
+  }
+  /* ---- crash panel ---- */
+  #crash { position:fixed; inset:0; z-index:60; display:none; background:#160f14; color:#ffb4b4;
+    padding:max(24px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right))
+      max(24px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left));
+    font-size:12px; line-height:1.6; overflow:auto; white-space:pre-wrap; }
+  #crash.on { display:block; }
+  #crash h1 { font-size:14px; color:#ff8080; margin-bottom:10px; letter-spacing:.1em; }
+
+  /* ---- Visual Upgrade v1: premium cabinet presentation ---- */
+  body {
+    background:
+      radial-gradient(circle at 50% 34%, rgba(111,78,49,.24), transparent 34%),
+      linear-gradient(145deg,#080a10 0%,#15101b 52%,#07090e 100%);
+  }
+  body::before {
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:.18;
+    background-image:repeating-linear-gradient(90deg,transparent 0 31px,rgba(255,255,255,.018) 32px);
+  }
+  #veil { background:radial-gradient(circle at 50% 46%,#2a1c1a 0,#0b0e14 56%); }
+  #veil .mark { font-size:22px; text-shadow:0 2px 0 #7a4a1c,0 0 24px rgba(245,200,119,.32); }
+  #bar { height:6px; border:1px solid #5f4327; box-shadow:0 0 18px rgba(245,200,119,.12); }
+  #bar i { background:linear-gradient(90deg,#a9762a,#ffe4a0,#f5c877); box-shadow:0 0 12px #f5c877; }
+
+  @media (prefers-reduced-motion:reduce) {
+    #playfield,#veil,#bar i { transition:none; }
+    .rotate-device { animation:none; transform:rotate(90deg); }
+  }
+
+  /* The title uses illustration at display resolution; exploration remains crisp pixel art. */
+  #titleScreen { position:absolute; inset:9px; z-index:3; overflow:hidden; color:#fff3d7;
+    background:#16382f url('__TITLE_ART__') center/cover no-repeat;
+    font-family:system-ui,-apple-system,sans-serif; container-type:size; }
+  #titleScreen[hidden] { display:none; }
+  #titleScreen::before { content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg,rgba(5,24,25,.83),rgba(8,27,27,.48) 35%,transparent 65%),linear-gradient(0deg,rgba(6,27,28,.55),transparent 25%); }
+  .title-content { position:absolute; inset:9% auto 8% 6%; width:46%; display:flex; flex-direction:column; align-items:flex-start; }
+  .title-eyebrow { font-size:clamp(8px,1.25cqw,16px); letter-spacing:.3em; color:#d6ddad; text-transform:uppercase; }
+  .title-content h1 { margin-top:5%; font:500 clamp(24px,6cqw,80px)/.98 Georgia,serif;
+    letter-spacing:-.045em; text-shadow:0 3px 18px #102923; }
+  .title-content h1 span { display:block; font-size:.55em; line-height:1.25; letter-spacing:.05em; color:#f5d799; }
+  .title-tagline { margin-top:5%; font-size:clamp(9px,1.45cqw,19px); line-height:1.65; color:#e0e8d6; }
+  #titleMenu { display:flex; flex-direction:column; gap:1.25cqh; margin-top:7%; width:72%; }
+  #titleMenu button { position:relative; width:100%; min-height:32px; padding:1.6cqh 2cqw;
+    border:1px solid rgba(224,230,198,.32); border-radius:4px; background:rgba(12,39,36,.76);
+    text-align:left; color:#f3e8ca; cursor:pointer; font:600 clamp(11px,1.5cqw,20px)/1.25 system-ui,sans-serif;
+    transition:background .14s,transform .14s; box-shadow:0 3px 12px #08221d44; }
+  #titleMenu button.selected { background:linear-gradient(110deg,#f1d493,#d9b766); border-color:#ffe7b3; color:#233e32; }
+  #titleMenu button.selected::after { content:'→'; position:absolute; right:7%; }
+  #titleMenu button:hover { transform:translateX(3px); }
+  #titleMenu button:focus-visible { outline:2px solid white; outline-offset:3px; }
+  #titleSave { margin-top:3%; font-size:clamp(8px,1.05cqw,14px); color:#c8d2b7; }
+  .title-footer { position:absolute; left:6%; right:5%; bottom:3.3%; display:flex; justify-content:space-between;
+    font-size:clamp(7px,1cqw,13px); color:#d6dfc5; letter-spacing:.04em; }
+  body.title-active #touch { display:none; }
+  /* Landscape controls live beside the playfield, keeping dialogue and menus clear. */
+  body.touch:not(.title-active) #touch .pad {
+    left:calc(-1 * var(--control-rail)); top:50%; bottom:auto;
+    width:88px; height:88px; transform:translateY(-50%);
+    background:rgba(33,59,49,.88); border-color:#93a77c;
+  }
+  body.touch:not(.title-active) #touch .btn.a,
+  body.touch:not(.title-active) #touch .btn.b {
+    right:calc(8px - var(--control-rail)); bottom:auto; transform:none;
+    width:52px; height:52px; background:#304e40; border-color:#93a77c;
+  }
+  body.touch:not(.title-active) #touch .btn.a { top:calc(50% - 61px); }
+  body.touch:not(.title-active) #touch .btn.b { top:calc(50% + 9px); }
+  body.touch:not(.title-active) #touch .btn.m { right:calc(12px - var(--control-rail)); top:9px; }
+  #stage { border-color:#819377; background:#20352c; box-shadow:0 0 0 2px #0c1916,0 16px 70px #0009; }
+  #stage::before,#stage::after { color:#b9cb99; }
+  #screen:focus-visible { outline:2px solid #ffe8aa; }
+  @media (max-height:480px) {
+    .title-content { top:6%; bottom:10%; }
+    .title-content h1 { margin-top:3%; font-size:5.5cqw; }
+    .title-tagline { margin-top:2%; font-size:1.3cqw; }
+    #titleMenu { margin-top:3%; gap:5px; }
+    #titleMenu button { min-height:44px; padding:5px 14px; }
+    #titleSave { margin-top:2%; }
+  }
+  @media (prefers-reduced-motion:reduce) { #titleMenu button { transition:none; } }
+</style>
+</head>
+<body>
+  <div id="gameViewport">
+    <div id="playfield">
+      <div id="stage"><canvas id="screen" width="320" height="180" tabindex="0" aria-label="Guardians of the Hearth game. Move with arrow keys or WASD, E to interact, M for journal."></canvas></div>
+      <section id="titleScreen" aria-label="Main menu" hidden>
+        <div class="title-content">
+          <p class="title-eyebrow">A little magic. A place to belong.</p>
+          <h1>Guardians<span>of the Hearth</span></h1>
+          <p class="title-tagline">Find your companion.<br>Bring a forgotten village to life.</p>
+          <nav id="titleMenu" aria-label="Choose your journey"></nav>
+          <p id="titleSave"></p>
+        </div>
+        <div class="title-footer"><span>EXPLORE · BEFRIEND · BUILD</span><span>Your adventure saves automatically</span></div>
+      </section>
+      <div id="touch" aria-hidden="true">
+        <div class="pad" id="tpad"><i></i></div>
+        <div class="btn a" id="tA">A</div>
+        <div class="btn b" id="tB">B</div>
+        <div class="btn m" id="tM">☰</div>
+      </div>
+    </div>
+    <div id="rotateGate" aria-hidden="true">
+      <div class="rotate-card">
+        <div class="rotate-kicker">Guardians of the Hearth</div>
+        <div class="rotate-device" aria-hidden="true"></div>
+        <h1>Turn your phone sideways</h1>
+        <p>The Hearth is a 16:9 pixel world. Landscape keeps every scene crisp, complete, and ready to explore.</p>
+        <div class="rotate-rule" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="veil">
+    <div class="mark">GUARDIANS OF THE HEARTH</div>
+    <div id="bar"><i></i></div>
+    <div class="hint" id="veilHint">warming the hearth…</div>
+    <button id="startBtn" hidden>Press to begin</button>
+  </div>
+
+  <div id="crash"><h1>The hearth went cold.</h1><div id="crashBody"></div></div>
+
+<script>
+// --- inlined modules -------------------------------------------------------
+// Each entry is one source file. They are realised in dependency order as Blob
+// URLs, with relative specifiers rewritten to the URL of the module they name.
+const MODULES = __MODULE_BUNDLE__;
+const URLS = Object.create(null);
+const REF = /(['"])(\.\.?\/[^'"]*\.js)\1/g;
+
+for (const m of MODULES) {
+  const code = m.code.replace(REF, (whole, q, spec) => {
+    const target = m.deps[spec];
+    return target && URLS[target] ? q + URLS[target] + q : whole;
+  });
+  URLS[m.id] = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+}
+window.__MODULE_URLS = URLS;
+</script>
+<script type="module">
+  const veil = document.getElementById('veil');
+  const bar = document.querySelector('#bar i');
+  const hint = document.getElementById('veilHint');
+  const startBtn = document.getElementById('startBtn');
+  const crash = document.getElementById('crash');
+  const crashBody = document.getElementById('crashBody');
+
+  window.__boot = { step:'init', pct:0, ready:false, error:null };
+  window.__setBoot = (step, pct) => {
+    window.__boot.step = step; window.__boot.pct = pct;
+    bar.style.width = pct + '%'; hint.textContent = step;
+  };
+
+  veil.addEventListener('transitionend', () => {
+    if (veil.classList.contains('gone')) veil.classList.add('hidden');
+  });
+
+  function fail(err) {
+    window.__boot.error = String(err && err.stack || err);
+    crash.classList.add('on');
+    crashBody.textContent = window.__boot.error;
+    veil.classList.add('gone');
+  }
+  window.addEventListener('error', e => fail(e.error || e.message));
+  window.addEventListener('unhandledrejection', e => fail(e.reason));
+
+  if (matchMedia('(hover: none) and (pointer: coarse)').matches) document.body.classList.add('touch');
+
+  try {
+    const { boot } = await import(window.__MODULE_URLS['main.js']);
+    await boot({ veil, startBtn, setBoot: window.__setBoot });
+  } catch (err) { fail(err); }
+</script>
+</body>
+</html>
