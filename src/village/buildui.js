@@ -271,7 +271,15 @@ function boardScene(params) {
     }
   }
 
-  return { enter() { Village.ensureState(); refresh(); }, update, render };
+  return {
+    get readingText() {
+      const row = rows[sel];
+      if (!row) return `Emberhollow. ${TABS[tab].label}. Village level ${Village.level()}.`;
+      const cost = row.cost || costToBuild(row.def.id);
+      return `${TABS[tab].label}. ${row.def.name}. ${row.def.desc || row.def.blurb || ''} ${cost ? `${cost.coins || 0} coins and ${cost.hearth || 0} Hearth.` : ''} ${row.lock?.reason || ''}`;
+    },
+    enter() { Village.ensureState(); refresh(); }, update, render,
+  };
 }
 
 // ====================================================== upgrade before/after card
@@ -301,6 +309,7 @@ function upgradeCardScene(params) {
 
   return {
     drawsBelow: true,
+    get readingText() { return def ? `${def.name}. ${gainsFrom(def.id, tier).join('. ')}. ${sel === 0 ? (can ? 'Upgrade.' : 'More coins or Hearth are needed.') : 'Not now.'}` : ''; },
     update() {
       t++;
       if (busy || UIx.busy) return;
@@ -423,6 +432,7 @@ function buildModeScene(params) {
 
   return {
     drawsBelow: true,
+    get readingText() { return def ? `${relocating ? 'Moving' : 'Placing'} ${def.name}. ${valid.ok ? 'Looks like a good spot. Select to place.' : valid.reason || 'It will not fit here.'} Go back to cancel.` : ''; },
     enter() {
       document.body.classList.add('build-active');
       Village.ensureState();

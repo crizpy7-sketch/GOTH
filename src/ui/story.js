@@ -4,6 +4,7 @@ import { R, LAYER } from '../core/renderer.js';
 import { Input } from '../core/input.js';
 import { Scenes } from '../core/scene.js';
 import { Audio } from '../core/audio.js';
+import { Narration } from '../core/narration.js';
 import { Font } from '../core/font.js';
 import { UIx } from '../core/bridge.js';
 import { Atlas } from '../art/atlas.js';
@@ -42,17 +43,29 @@ function storyScene(options = {}) {
   const ready = () => alive && Scenes.top === scene && !closing && open >= (motion() ? IN_FRAMES : 1);
   const cardStart = () => Math.floor(pick / 3) * 3;
   const cardRect = slot => ({ x: 10 + slot * 102, y: 30, w: 96, h: 77 });
+  const choiceLines = () => Font.wrap(choices[pick].detail || `Would you like ${choices[pick].label} to travel beside you?`, 284).slice(0, 3);
+
+  function refreshNarration() {
+    if (!ready()) return;
+    if (stage === 'pending') { Narration.clear(scene); return; }
+    if (S.settings.readAloud) shown = pageLength();
+    const text = stage === 'choices'
+      ? `${choices[pick].label}. ${choiceLines().join(' ')}` : pages[page].join(' ');
+    Narration.set(text, { key: `${stage}:${page}:${stage === 'choices' ? pick : ''}`, speaker: options.speaker, owner: scene });
+  }
 
   function accessiblePage() {
     const text = stage === 'choices' ? `${choices[pick].label}. ${choices[pick].detail || ''}. Choose a companion or go back.`
       : stage === 'pending' ? 'A new bond is taking shape.' : pages[page].join(' ');
     screen?.setAttribute?.('aria-label', `${options.speaker || 'Story'}. ${text}`);
+    refreshNarration();
   }
 
   function finish(completed) {
     if (closing) return;
     result = { completed, choice: chosen };
     closing = 1;
+    Narration.clear(scene);
     Audio.sfx(completed ? 'chime' : 'cancel', { gain: .55 });
   }
 
@@ -214,7 +227,7 @@ function storyScene(options = {}) {
     }
     let lines = pages[page], count = shown;
     if (stage === 'choices') {
-      lines = Font.wrap(choices[pick].detail || `Would you like ${choices[pick].label} to travel beside you?`, 284).slice(0, 3);
+      lines = choiceLines();
       count = Infinity;
     } else if (stage === 'pending') { lines = ['A new bond is taking shape...']; count = Infinity; }
     lines.forEach((line, i) => {
@@ -231,6 +244,7 @@ function storyScene(options = {}) {
 
   const scene = {
     pausesBelow: true, drawsBelow: false,
+    refreshNarration,
     get touchPhase() {
       if (closing || open < (motion() ? IN_FRAMES : 1)) return 'pending';
       return stage === 'choices' || stage === 'pending' ? stage : typed() ? 'narrative' : 'reveal';
@@ -246,6 +260,7 @@ function storyScene(options = {}) {
     },
     exit() {
       alive = false;
+      Narration.clear(scene);
       screen?.removeEventListener('pointerdown', point);
       // Preserve gamepad edge state: clearing it here would make a still-held
       // confirm button become a fresh world interaction on the following frame.
@@ -263,8 +278,13 @@ function storyScene(options = {}) {
         if (++closing > (motion() ? OUT_FRAMES : 1)) Scenes.remove(scene, result);
         return;
       }
-      if (open < (motion() ? IN_FRAMES : 1)) { open++; return; }
+      if (open < (motion() ? IN_FRAMES : 1)) {
+        open++;
+        if (open >= (motion() ? IN_FRAMES : 1)) refreshNarration();
+        return;
+      }
       if (stage === 'pending') return;
+      if (S.settings.readAloud && !typed()) { shown = pageLength(); refreshNarration(); }
       if (stage === 'choices') {
         if (Input.pressed('b')) { finish(false); return; }
         if (Input.nav('right') || Input.nav('down')) move(1);
@@ -276,7 +296,7 @@ function storyScene(options = {}) {
       if (!typed()) {
         const speed = SPEED[Math.max(1, Math.min(3, S.settings.textSpeed || 2))];
         shown = Math.min(pageLength(), shown + speed);
-        if (t % 4 === 0) Audio.sfx('text', { gain: .3 });
+        if (t % 4 === 0 && !Narration.active) Audio.sfx('text', { gain: .3 });
       }
     },
     render() {

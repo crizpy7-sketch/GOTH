@@ -8,6 +8,7 @@ import { Input } from '../core/input.js';
 import { Scenes } from '../core/scene.js';
 import { Atlas } from '../art/atlas.js';
 import { Audio } from '../core/audio.js';
+import { Narration } from '../core/narration.js';
 import { UIx, Hooks } from '../core/bridge.js';
 import { S, addHearth, save } from '../state.js';
 import { Bus, EV } from '../core/events.js';
@@ -119,6 +120,7 @@ function battleScene(params) {
   // --- event consumption -----------------------------------------------------
   function pump() {
     if (textShown < text.length) return;
+    if (S.settings.readAloud && Narration.active && Narration.currentText === text && !Input.held('a')) return;
     if (textHold > 0) { textHold--; return; }
     if (bonding?.stage === 'waiting' && bonding.t < BOND_WAIT) return;
     if (!queue.length) {
@@ -174,7 +176,7 @@ function battleScene(params) {
 
       case 'faint': {
         faint[e.side] = 0;
-        Audio.sfx('deny');
+        Audio.sfx('faint');
         textHold = 24;
         break;
       }
@@ -199,7 +201,7 @@ function battleScene(params) {
         xpTarget = 0;
         shownXp.v = 0;
         if (e.maxhp) hpTarget.player = clamp(e.hp / e.maxhp, 0, 1);
-        Audio.sfx('chime');
+        Audio.sfx('levelup');
         spawnFx('fx.star', PLR.x + 32, PLR.y + 10);
         textHold = 20;
         break;
@@ -210,6 +212,7 @@ function battleScene(params) {
         if (result) {
           shown.player = presentationOf(guardian);
           evolving = { t: 0, ...result };
+          Audio.sfx('evolve');
           setText(`${result.fromName} grew into ${result.toName}!`, 72);
           Bus.emit(EV.GUARDIAN_EVOLVED, { guardian, ...result });
           save();
@@ -225,7 +228,7 @@ function battleScene(params) {
       case 'bond-ok':
         bonding = { ...bonding, t: 0, beats: BOND_BEATS, ok: true, stage: 'welcome',
           name: e.name, hearth: e.hearth || 0, destination: S.party.length < 6 ? 'party' : 'box' };
-        Audio.sfx('chime');
+        Audio.sfx('bond');
         if (e.hearth) addHearth(e.hearth);
         S.seen[e.species] = 'bonded';
         if (e.foe) {
@@ -301,6 +304,7 @@ function battleScene(params) {
   // --- update ----------------------------------------------------------------
   function update() {
     t++;
+    if (S.settings.readAloud) textShown = text.length;
     if (textShown < text.length) textShown += 2;
     for (let i = fx.length - 1; i >= 0; i--) if (++fx[i].t > fx[i].frames * 4) fx.splice(i, 1);
     for (const k of ['player', 'foe']) {
@@ -328,11 +332,15 @@ function battleScene(params) {
     if (phase === 'intro') {
       introT++;
       // Long enough for the slide-in to land, short enough not to make anyone wait.
-      if (introT > 26 && (Input.pressed('a') || introT > 54)) { phase = 'anim'; queue = []; textHold = 0; }
+      if (introT > 26 && (Input.pressed('a') || (introT > 54 && !(S.settings.readAloud && Narration.active)))) {
+        if (Input.pressed('a')) Narration.stop();
+        phase = 'anim'; queue = []; textHold = 0;
+      }
       return;
     }
 
     if (phase === 'anim') {
+      if (Input.pressed('a') && S.settings.readAloud) Narration.stop();
       // Holding A fast-forwards the beat, which is what impatient players want.
       if (Input.held('a') && textHold > 2) textHold -= 2;
       if (textShown < text.length && Input.held('a')) textShown += 3;
@@ -858,6 +866,16 @@ function battleScene(params) {
   }
 
   return {
+    get readingText() {
+      if (phase === 'menu') return `${text} ${MENU[cursor]}. ${['Choose a move.','Offer a Woven Charm to make a friend.','Choose a Guardian.','Use an item.','Leave this encounter.'][cursor]}`;
+      if (phase === 'moves') {
+        const g = activeOf(B, 'player'), move = getMove(hasFocus(g) ? g.moves[moveCursor]?.id : 'struggle');
+        return move ? `${move.name}. ${move.type} move. Select to use it, or go back.` : 'Choose a move.';
+      }
+      if (phase === 'bond') return `Offer a Woven Charm. ${S.bag.charm || 0} left. ${safeBondPreview()?.percent || 0} percent bond chance. Select to offer, or go back.`;
+      if (phase === 'bag') { const item = bagItems()[bagCursor]; return `${item.name}. ${item.n} left. Select to use, or go back.`; }
+      return phase === 'intro' || phase === 'anim' ? text : '';
+    },
     enter(p) {
       params = p || params || {};
       resolve = params.__resolve || null;

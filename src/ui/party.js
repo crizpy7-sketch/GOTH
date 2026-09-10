@@ -153,6 +153,13 @@ function partyScene(params) {
   }
 
   const scene = {
+    get readingText() {
+      if (notice) return notice;
+      if (tabs) return `${home ? 'At home' : 'Travelling'}. Choose a roster, then move down to your Guardians.`;
+      const g = party()[sel];
+      return g ? `${displayName(g)}. Level ${g.lvl}. ${g.hp} of ${g.maxhp} health. ${picking ? 'Select this Guardian or go back.' : 'Select to see your choices.'}`
+        : `${home ? 'No Guardians at home yet.' : 'Meet Gran Willow to choose your first companion.'}`;
+    },
     enter() {
       if (picking) sel = Math.max(0, party().findIndex((g, i) => g.hp > 0 && i !== params.active));
       screen = document.getElementById('screen');
@@ -264,6 +271,7 @@ function summaryScene(params) {
   const sp = getSpecies(g.species);
 
   return {
+    get readingText() { return `${displayName(g)}. Level ${g.lvl}. ${g.hp} of ${g.maxhp} health. ${sp?.dex || ''}`; },
     update() {
       t++;
       if (Input.pressed('b') || Input.pressed('a')) { Audio.sfx('cancel'); Scenes.pop(); }
@@ -322,6 +330,7 @@ function dexScene() {
   const rows = GUARDIANS.map(g => ({ ...g, state: S.seen?.[g.id] || null }));
 
   return {
+    get readingText() { const row = rows[sel]; return row?.state ? `${row.name}. ${row.state === 'bonded' ? 'Your friend.' : 'Discovered.'} ${row.dex || ''}` : 'An undiscovered Guardian. Keep exploring to meet them.'; },
     update() {
       t++;
       if (Input.pressed('b')) { Audio.sfx('cancel'); Scenes.pop(); return; }

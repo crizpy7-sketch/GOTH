@@ -246,6 +246,11 @@ function missionScene(params) {
   }
 
   return {
+    get readingText() {
+      const row = rows[sel];
+      return row ? `${TABS[tab].label}. ${row.m.title}. ${row.m.desc}. ${row.done ? 'Completed.' : row.tracked ? 'Tracked. Select when you have done it together.' : 'Select to track this mission.'}`
+        : `${TABS[tab].label}. No missions here yet.`;
+    },
     enter() { M.ensureState(); M.refreshDaily(); refresh(); },
     update, render,
   };

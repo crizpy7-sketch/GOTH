@@ -294,6 +294,49 @@
     #titleSave { margin-top:2%; }
   }
   @media (prefers-reduced-motion:reduce) { #titleMenu button { transition:none; } }
+  /* Reading gets its own rail: it never covers captions or touch controls. */
+  body.reading-enabled #gameViewport { padding-bottom:calc(54px + max(6px,env(safe-area-inset-bottom))); }
+  #readingRail { position:absolute; z-index:6; left:50%; transform:translateX(-50%);
+    bottom:max(6px,env(safe-area-inset-bottom));
+    display:flex; align-items:center; gap:10px; width:min(680px,calc(100% - 20px)); height:46px;
+    padding:2px 6px 2px 14px; border:1px solid #887347; border-radius:12px;
+    color:#fff0cf; background:linear-gradient(120deg,#243d33,#15271f); box-shadow:0 4px 18px #0005; }
+  #readingStatus { flex:1; min-width:0; font-size:13px; line-height:1.25; }
+  #readingRail button, #titleReading { min-height:40px; padding:7px 13px; border:1px solid #a28b56;
+    border-radius:8px; background:#e7d3a2; color:#20362a; font:650 14px HearthText,system-ui,sans-serif; cursor:pointer; }
+  #readingRail #readingOptions { background:#293f35; color:#f7e6bf; }
+  #readingRail button:disabled { opacity:.5; cursor:default; }
+  #titleReading { margin-top:10px; background:#20392ee6; color:#f7e6bf; }
+  #readingRail[hidden], #soundPanel[hidden] { display:none; }
+  body.sound-panel-open #readingRail, body.sound-panel-open #touch { visibility:hidden; }
+  body.is-portrait #readingRail { display:none; }
+  #soundPanel { position:absolute; inset:0; z-index:7; display:grid; place-items:center;
+    padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom)); background:#08140eef;
+    color:#f8edce; touch-action:pan-y; }
+  .sound-card { width:min(650px,100%); max-height:100%; overflow-y:auto; overscroll-behavior:contain;
+    padding:22px; border:1px solid #958056; border-radius:18px; background:linear-gradient(140deg,#263c31,#15271f);
+    box-shadow:0 18px 70px #0008; touch-action:pan-y; }
+  .sound-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+  .sound-heading h1 { font-size:25px; font-weight:700; color:#eed193; }
+  .sound-card p { margin:10px 0 16px; font-size:14px; line-height:1.5; color:#d9dec9; }
+  .sound-card label { display:flex; justify-content:space-between; align-items:center; gap:12px; min-height:44px; font-size:16px; }
+  .sound-toggle { padding:10px 12px; margin:14px 0; border:1px solid #66826a; border-radius:10px; background:#38563b; }
+  .sound-card input[type=checkbox] { width:24px; height:24px; accent-color:#ddbe7b; }
+  .sound-card select { font:15px HearthText,system-ui,sans-serif; width:100%; min-height:44px; padding:8px;
+    color:#fff3d2; background:#12271e; border:1px solid #7d8b69; border-radius:8px; }
+  .sound-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 22px; }
+  .sound-card input[type=range] { width:100%; min-height:36px; accent-color:#ddbe7b; touch-action:pan-y; }
+  .sound-card output { color:#edd095; }
+  .sound-card button { min-height:44px; padding:10px 15px; border:1px solid #a48b56; border-radius:8px;
+    background:#e6cd91; color:#21382a; font:650 15px HearthText,system-ui,sans-serif; cursor:pointer; }
+  .sound-card button:focus-visible, .sound-card input:focus-visible, .sound-card select:focus-visible,
+  #readingRail button:focus-visible, #titleReading:focus-visible { outline:3px solid #fff2a3; outline-offset:3px; }
+  .sound-actions { display:flex; align-items:center; gap:14px; margin-top:12px; }
+  #sound-saved { font-size:13px; color:#cfdac3; }
+  @media(max-height:450px) { .sound-card { padding:14px 20px; } .sound-card p { margin:6px 0 8px; }
+    .sound-heading h1 { font-size:21px; } #readingStatus { font-size:12px; } }
+  @media(max-width:600px) { #readingRail { gap:6px; padding-left:9px; } #readingRail button { padding:7px 9px; font-size:13px; }
+    .sound-grid { gap:6px 16px; } }
 </style>
 </head>
 <body>
@@ -307,6 +350,7 @@
           <p class="title-tagline">Find your companion.<br>Bring a forgotten village to life.</p>
           <nav id="titleMenu" aria-label="Choose your journey"></nav>
           <p id="titleSave"></p>
+          <button type="button" id="titleReading" aria-pressed="false">Read to me: Off</button>
         </div>
         <div class="title-footer"><span>EXPLORE · BEFRIEND · BUILD</span><span>Your adventure saves automatically</span></div>
       </section>
@@ -324,6 +368,26 @@
         <button type="button" class="btn f" id="tF" tabindex="-1" aria-label="Enter fullscreen" hidden>⛶</button>
       </div>
     </div>
+    <section id="soundPanel" role="dialog" aria-modal="true" aria-labelledby="soundHeading" hidden>
+      <div class="sound-card">
+        <div class="sound-heading"><h1 id="soundHeading">Sound & reading</h1><button type="button" id="soundClose">Done</button></div>
+        <p>A gentle voice can read dialogue, choices, missions and battle commands. Take your time; you choose when to continue.</p>
+        <label class="sound-toggle" for="sound-readAloud"><span>Read to me automatically</span><input type="checkbox" id="sound-readAloud"></label>
+        <div class="sound-grid">
+          <div><label for="sound-voiceURI">Reading voice</label><select id="sound-voiceURI"><option value="">Warm automatic (device voice)</option></select></div>
+          <div><label for="sound-voiceRate">Speaking pace</label><select id="sound-voiceRate"><option value="0.78">Slow and steady</option><option value="0.88">Gentle</option><option value="1">Regular</option></select></div>
+        </div>
+        <p id="sound-voiceStatus"></p>
+        <div class="sound-grid">
+          <div><label for="sound-voiceVolume">Reading voice <output id="voiceVolumeValue">90%</output></label><input id="sound-voiceVolume" type="range" min="0" max="100" step="5"></div>
+          <div><label for="sound-volume">Overall volume <output id="volumeValue">70%</output></label><input id="sound-volume" type="range" min="0" max="100" step="5"></div>
+          <div><label for="sound-musicVolume">Music <output id="musicVolumeValue">50%</output></label><input id="sound-musicVolume" type="range" min="0" max="100" step="5"></div>
+          <div><label for="sound-effectsVolume">Sound effects <output id="effectsVolumeValue">90%</output></label><input id="sound-effectsVolume" type="range" min="0" max="100" step="5"></div>
+        </div>
+        <label for="sound-muted"><span>Mute all sound</span><input type="checkbox" id="sound-muted"></label>
+        <div class="sound-actions"><button type="button" id="voicePreview">Hear this voice</button><span id="sound-saved" role="status">Settings stay on this device.</span></div>
+      </div>
+    </section>
     <div id="rotateGate" aria-hidden="true">
       <div class="rotate-card">
         <div class="rotate-kicker">Guardians of the Hearth</div>
@@ -333,8 +397,12 @@
         <div class="rotate-rule" aria-hidden="true"></div>
       </div>
     </div>
+    <div id="readingRail" role="group" aria-label="Reading companion" hidden>
+      <span id="readingStatus" role="status">Take your time. The page waits for you.</span>
+      <button type="button" id="listenCaption" aria-label="Read this caption again">▶ Listen</button>
+      <button type="button" id="readingOptions">Voice & sound</button>
+    </div>
   </div>
-
   <div id="veil">
     <div class="mark">GUARDIANS OF THE HEARTH</div>
     <div id="bar"><i></i></div>

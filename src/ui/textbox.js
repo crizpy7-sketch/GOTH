@@ -11,6 +11,7 @@ import { Input } from '../core/input.js';
 import { Scenes } from '../core/scene.js';
 import { Atlas } from '../art/atlas.js';
 import { Audio } from '../core/audio.js';
+import { Narration } from '../core/narration.js';
 import { UIx } from '../core/bridge.js';
 import { Font } from '../core/font.js';
 import { S } from '../state.js';
@@ -61,18 +62,41 @@ function textboxScene(params) {
   const boxH = () => BOX.h + (choices && !morePages() ? choices.length * 12 + 4 : 0);
   const boxY = () => R.H - boxH() - 4;
 
-  function advance() {
-    if (morePages()) { page++; shown = 0; Audio.sfx('cursor', { gain: 0.6 }); }
-    else { Audio.sfx('confirm'); closing = 1; }
+  function refreshNarration(selectionOnly = false) {
+    if (Scenes.top !== scene || closing || open < OPEN) return;
+    if (S.settings.readAloud) shown = pageLen();
+    const caption = pageLines().join(' ');
+    const choice = choices?.length && !morePages() && typed() ? choices[pick] : null;
+    const full = choice ? `${caption} ${choice}.` : caption;
+    Narration.set(full, {
+      key: `${page}:${choice === null ? 'page' : pick}`,
+      speaker, owner: scene,
+      ...(selectionOnly && choice ? { utterance: `${choice}.` } : {}),
+    });
   }
 
-  return {
+  function close() { Narration.clear(scene); closing = 1; }
+
+  function advance() {
+    if (morePages()) {
+      page++; shown = 0; refreshNarration();
+      Audio.sfx('cursor', { gain: 0.6 });
+    } else { Audio.sfx('confirm'); close(); }
+  }
+
+  const scene = {
     pausesBelow: false, drawsBelow: true,
+    refreshNarration,
+    exit() { Narration.clear(scene); },
 
     update() {
       t++;
       if (closing) { if (++closing > OPEN) Scenes.pop(choices ? pick : undefined); return; }
-      if (open < OPEN) { open++; return; }
+      if (open < OPEN) { open++; if (open === OPEN) refreshNarration(); return; }
+
+      // A child can enable Listen partway through a page. Keep the words visible
+      // beside the voice without relying on browser-specific speech boundaries.
+      if (S.settings.readAloud && !typed()) { shown = pageLen(); refreshNarration(); }
 
       if (!typed()) {
         const rate = SPEED[clamp(S.settings.textSpeed || 2, 1, 3)];
@@ -81,15 +105,16 @@ function textboxScene(params) {
         shown += fast ? rate * 3.5 : rate;
         // First tap reveals the current page; the next tap advances it.
         if (Input.pressed('a') || Input.pressed('b')) shown = pageLen();
-        if (t % 3 === 0) Audio.sfx('text', { gain: 0.5 });
+        if (t % 3 === 0 && !Narration.active) Audio.sfx('text', { gain: 0.5 });
+        if (typed() && choices && !morePages()) refreshNarration();
         return;
       }
 
       if (choices && !morePages()) {
-        if (Input.pressed('down')) { pick = (pick + 1) % choices.length; Audio.sfx('cursor'); }
-        if (Input.pressed('up')) { pick = (pick + choices.length - 1) % choices.length; Audio.sfx('cursor'); }
-        if (Input.pressed('a')) { Audio.sfx('confirm'); closing = 1; }
-        if (Input.pressed('b')) { Audio.sfx('cancel'); pick = -1; closing = 1; }
+        if (Input.pressed('down')) { pick = (pick + 1) % choices.length; refreshNarration(true); Audio.sfx('cursor'); }
+        if (Input.pressed('up')) { pick = (pick + choices.length - 1) % choices.length; refreshNarration(true); Audio.sfx('cursor'); }
+        if (Input.pressed('a')) { Audio.sfx('confirm'); close(); }
+        if (Input.pressed('b')) { Audio.sfx('cancel'); pick = -1; close(); }
         return;
       }
       if (Input.pressed('a') || Input.pressed('b')) advance();
@@ -133,6 +158,7 @@ function textboxScene(params) {
       });
     },
   };
+  return scene;
 }
 
 export function register() {

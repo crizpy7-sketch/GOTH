@@ -3,6 +3,7 @@ import { R, LAYER } from '../core/renderer.js';
 import { Input } from '../core/input.js';
 import { Scenes } from '../core/scene.js';
 import { Audio } from '../core/audio.js';
+import { Narration } from '../core/narration.js';
 import { UIx, Hooks } from '../core/bridge.js';
 import { Font } from '../core/font.js';
 import { S, save } from '../state.js';
@@ -51,6 +52,7 @@ function pauseScene() {
 
   return {
     pausesBelow: true, drawsBelow: true,
+    get readingText() { return noticeLife > 0 ? notice : `Journal. ${ITEMS[sel].label}. ${ITEMS[sel].hint}`; },
     update() {
       if (noticeLife > 0) noticeLife--;
       if (busy || UIx.busy) return;
@@ -104,8 +106,8 @@ function settingsScene() {
   let sel = 0, busy = false, message = 'Make the journey feel right for you.';
   const rows = () => [
     ['Sound', Audio.muted ? 'Off' : 'On'],
-    ['Volume', `${Math.round(S.settings.volume * 100)}%`],
-    ['Reading pace', ['Slow', 'Normal', 'Fast'][(S.settings.textSpeed || 2) - 1]],
+    ['Sound & reading', `${Math.round(S.settings.volume * 100)}%`],
+    ['Caption speed', ['Slow', 'Normal', 'Fast'][(S.settings.textSpeed || 2) - 1]],
     ['Journey hints', S.settings.showHints === false ? 'Off' : 'On'],
     ['Ambient motion', S.settings.reducedMotion ? 'Reduced' : 'Full'],
     ['Graphics', S.settings.graphics === 'balanced' ? 'Balanced' : 'High detail'],
@@ -138,17 +140,19 @@ function settingsScene() {
       R.setQuality(S.settings.graphics);
     }
     Audio.sfx('cursor');
+    Narration.configure();
     message = save() ? 'Settings saved on this device.' : 'Changed for this session. Save unavailable.';
   }
 
   return {
     pausesBelow: true, drawsBelow: true,
+    get readingText() { const row = rows()[sel]; return `${row[0]}. ${row[1]}. ${sel === 1 ? 'Select to choose a voice and sound levels.' : ''}`; },
     update() {
       if (busy || UIx.busy) return;
       if (Input.pressed('b') || Input.pressed('start')) { Audio.sfx('cancel'); Scenes.pop(); return; }
       if (Input.nav('down')) { sel = (sel + 1) % 8; Audio.sfx('cursor'); }
       if (Input.nav('up')) { sel = (sel + 7) % 8; Audio.sfx('cursor'); }
-      if (Input.pressed('a')) { Input.consume('a'); change(); }
+      if (Input.pressed('a')) { Input.consume('a'); if (sel === 1) Scenes.push('sound-settings'); else change(); }
       else if (sel < 6 && Input.nav('right')) change(1);
       else if (sel < 6 && Input.nav('left')) change(-1);
     },
