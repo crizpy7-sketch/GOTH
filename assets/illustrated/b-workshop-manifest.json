@@ -1,0 +1,32 @@
+{
+  "id": "workshop",
+  "tiers": 3,
+  "logicalWidth": 48,
+  "logicalHeight": 64,
+  "pixelRatio": 4,
+  "sharedScale": 0.3102310231023102,
+  "sourceBounds": [
+    {
+      "left": 20,
+      "top": 94,
+      "width": 581,
+      "height": 576,
+      "structuralAlphaPixels": 239317
+    },
+    {
+      "left": 636,
+      "top": 91,
+      "width": 593,
+      "height": 583,
+      "structuralAlphaPixels": 246443
+    },
+    {
+      "left": 1262,
+      "top": 55,
+      "width": 606,
+      "height": 622,
+      "structuralAlphaPixels": 259661
+    }
+  ],
+  "structuralAlphaThreshold": 96
+}

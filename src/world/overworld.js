@@ -412,7 +412,11 @@ function updatePlayer() {
   const d = Input.dir();
   player.running = Input.held('run');
 
-  if (!d) { player.turn = 0; player.anim = 0; return; }
+  if (!d) {
+    const tap = Input.tappedDir();
+    if (tap) player.dir = tap;
+    player.turn = 0; player.anim = 0; return;
+  }
 
   if (d !== player.dir) {
     // Turn in place first — a tap should never move you.
@@ -436,6 +440,7 @@ function update() {
 
   if (!busy) updatePlayer();
   else player.running = false;
+  S.player.dir = player.dir;
 
   for (const n of npcs) {
     n.notice(player.x, player.y);
@@ -476,6 +481,31 @@ function worldSprite(name, frame = 0) {
   return Atlas.tryGet(key, frame);
 }
 
+// One map-sized ground surface replaces hundreds of filtered tile draws per
+// frame. Keep only the current map/season: about 13 MB for the largest opening
+// map. Village additions remain in their live overlay; actors, water shimmer
+// and every animated tile continue to render each frame.
+let groundSurface = null;
+function cachedGround() {
+  if (!document.createElement) return null;
+  const season=S.clock.season;
+  if(groundSurface?.map===map && groundSurface.season===season)return groundSurface;
+  const canvas=document.createElement('canvas'),ratio=3;
+  canvas.width=map.w*TILE*ratio;canvas.height=map.h*TILE*ratio;
+  const ctx=canvas.getContext('2d');
+  if(!ctx?.drawImage)return null;
+  ctx.setTransform(ratio,0,0,ratio,0,0);ctx.imageSmoothingEnabled=true;
+  const animated=[];
+  for(let y=0;y<map.h;y++)for(let x=0;x<map.w;x++) {
+    const name=map.ground(x,y);
+    if(Atlas.frames(name)>1){animated.push({x,y,name});continue;}
+    const img=worldSprite(name,0);
+    if(img)ctx.drawImage(img,x*TILE,y*TILE,TILE,TILE);
+  }
+  groundSurface={map,season,canvas,ratio,animated};
+  return groundSurface;
+}
+
 function drawTiles() {
   const cam = R.camera;
   const detailedTrees = Atlas.tryGet('t.tree.oak')?.logicalWidth === 48;
@@ -483,11 +513,24 @@ function drawTiles() {
   const y0 = Math.max(0, Math.floor(cam.y / TILE) - 1);
   const x1 = Math.min(map.w - 1, Math.ceil((cam.x + R.viewW) / TILE) + 1);
   const y1 = Math.min(map.h - 1, Math.ceil((cam.y + R.viewH) / TILE) + 1);
-  const frame = Math.floor(performance.now() / 180);
+  const frame = S.settings.reducedMotion ? 0 : Math.floor(performance.now() / 180);
 
   R.layer(LAYER.GROUND, () => {
     // Outside the map edge reads as void otherwise; fill it with the map's own base.
     R.rect(0, 0, R.viewW, R.viewH, map.indoor ? '#171019' : '#2c3a22');
+    const cached=cachedGround();
+    if(cached) {
+      const sx=Math.max(0,Math.floor(cam.x)),sy=Math.max(0,Math.floor(cam.y));
+      const w=Math.min(map.w*TILE-sx,R.viewW+1),h=Math.min(map.h*TILE-sy,R.viewH+1);
+      const ctx=R.ctx;ctx.save();ctx.imageSmoothingEnabled=true;
+      if(w>0&&h>0)ctx.drawImage(cached.canvas,sx*cached.ratio,sy*cached.ratio,w*cached.ratio,h*cached.ratio,
+        Math.round(sx-cam.x),Math.round(sy-cam.y),w,h);
+      ctx.restore();
+      for(const tile of cached.animated)if(tile.x>=x0&&tile.x<=x1&&tile.y>=y0&&tile.y<=y1){
+        const img=worldSprite(tile.name,frame);if(img)R.blit(img,tile.x*TILE-cam.x,tile.y*TILE-cam.y);
+      }
+      return;
+    }
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
         const img = worldSprite(map.ground(x, y), frame);
@@ -517,6 +560,7 @@ function drawTiles() {
       for (let x = x0; x <= x1; x++) {
         const name = map.over(x, y);
         if (detailedTrees && name?.startsWith('t.tree.canopy.')) continue;
+        if (Atlas.has('t.pine.illustrated') && (name === 't.pine.top' || name === 't.pine.trunk')) continue;
         const img = worldSprite(name, frame);
         if (img) R.blit(img, x * TILE - cam.x, y * TILE - cam.y);
       }
@@ -533,14 +577,16 @@ function drawTrees(cam) {
   const x1 = Math.min(map.w - 1, Math.ceil((cam.x + R.viewW) / TILE) + 3);
   const y1 = Math.min(map.h - 1, Math.ceil((cam.y + R.viewH) / TILE) + 4);
   const img = worldSprite('t.tree.oak');
+  const pine = worldSprite('t.pine.illustrated');
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-    if (map.over(x, y) !== 't.tree.canopy.nw') continue;
+    const name = map.over(x, y), isPine = name === 't.pine.top' && pine;
+    if (name !== 't.tree.canopy.nw' && !isPine) continue;
     const rootY = (y + 2) * TILE;
-    const sx = x * TILE - cam.x - 8, sy = rootY - cam.y - 64;
+    const sx = x * TILE - cam.x - (isPine ? 12 : 8), sy = rootY - cam.y - 64;
     const behind = player.py + TILE < rootY
       && player.py + TILE > rootY - 58
       && player.px + 8 > x * TILE - 5 && player.px + 8 < x * TILE + 39;
-    R.sortEntity(rootY, () => R.blit(img, sx, sy, {alpha: behind ? 0.52 : 1}));
+    R.sortEntity(rootY, () => R.blit(isPine ? pine : img, sx, sy, {alpha: behind ? 0.52 : 1}));
   }
 }
 

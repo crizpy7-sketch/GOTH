@@ -1,0 +1,142 @@
+{
+  "group": "outdoor",
+  "source": "props-outdoor-source.png",
+  "props": [
+    {
+      "id": "bush",
+      "file": "prop-bush.webp",
+      "sourceBounds": {
+        "left": 17,
+        "top": 127,
+        "width": 400,
+        "height": 372
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "rock",
+      "file": "prop-rock.webp",
+      "sourceBounds": {
+        "left": 441,
+        "top": 160,
+        "width": 365,
+        "height": 327
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "sign",
+      "file": "prop-sign.webp",
+      "sourceBounds": {
+        "left": 868,
+        "top": 75,
+        "width": 267,
+        "height": 414
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "lantern",
+      "file": "prop-lantern.webp",
+      "sourceBounds": {
+        "left": 1230,
+        "top": 46,
+        "width": 239,
+        "height": 452
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "well",
+      "file": "prop-well.webp",
+      "sourceBounds": {
+        "left": 24,
+        "top": 540,
+        "width": 355,
+        "height": 413
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "bench",
+      "file": "prop-bench.webp",
+      "sourceBounds": {
+        "left": 421,
+        "top": 592,
+        "width": 393,
+        "height": 361
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "flowerpot",
+      "file": "prop-flowerpot.webp",
+      "sourceBounds": {
+        "left": 860,
+        "top": 623,
+        "width": 288,
+        "height": 312
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "crate",
+      "file": "prop-crate.webp",
+      "sourceBounds": {
+        "left": 1219,
+        "top": 616,
+        "width": 286,
+        "height": 330
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    }
+  ]
+}

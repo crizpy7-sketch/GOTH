@@ -1,3 +1,7 @@
+# Current illustrated opening
+
+The smooth illustrated production assets are in `assets/illustrated/`. See [the release record](../ILLUSTRATED_RELEASE.md#art-provenance) for the cast, creature, scenery, prop and story prompts and preparation details. The sections below document earlier artwork revisions retained in the repository.
+
 # Artwork provenance
 
 ## Important conversations (v4)

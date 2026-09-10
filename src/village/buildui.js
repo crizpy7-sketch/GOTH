@@ -24,6 +24,48 @@ import {
 import { Economy } from './economy.js';
 
 const money = c => `${c.coins || 0}c${c.hearth ? `  ${c.hearth}h` : ''}`;
+const fitLine = (text, width) => {
+  let out = String(text);
+  if (Font.measure(out) <= width) return out;
+  while (out && Font.measure(out + '…') > width) out = out.slice(0, -1);
+  return out + '…';
+};
+function shortLines(text, width, count) {
+  const lines = Font.wrap(text, width);
+  const visible = lines.slice(0, count);
+  if (lines.length > count && visible.length) visible[count - 1] = fitLine(visible[count - 1] + '…', width);
+  return visible;
+}
+const previewBounds = new WeakMap();
+function drawBuildingPreview(img, centreX, top, width, height) {
+  if (!img) return;
+  let bounds = previewBounds.get(img);
+  if (!bounds) {
+    bounds = { x: 0, y: 0, w: img.width, h: img.height };
+    try {
+      const alpha = img.getContext('2d').getImageData(0, 0, img.width, img.height).data;
+      let left = img.width, right = -1, first = img.height, bottom = -1;
+      for (let y = 0; y < img.height; y++) for (let x = 0; x < img.width; x++) {
+        if (!alpha[(y * img.width + x) * 4 + 3]) continue;
+        left = Math.min(left, x); right = Math.max(right, x);
+        first = Math.min(first, y); bottom = Math.max(bottom, y);
+      }
+      if (right >= left && bottom >= first) bounds = { x: left, y: first, w: right - left + 1, h: bottom - first + 1 };
+    } catch { /* Non-canvas artwork can still use its complete image frame. */ }
+    previewBounds.set(img, bounds);
+  }
+  // World sprites retain transparent room for their shared scale and feet. A
+  // menu thumbnail instead fits the painted art, including every shadow pixel.
+  const scale = Math.min(width / bounds.w, height / bounds.h);
+  const w = bounds.w * scale, h = bounds.h * scale;
+  const ctx = R.ctx;
+  ctx.save();
+  ctx.imageSmoothingEnabled = !!img.smooth;
+  if (img.smooth) ctx.imageSmoothingQuality = 'low';
+  ctx.drawImage(img, bounds.x, bounds.y, bounds.w, bounds.h,
+    centreX - w / 2, top + height - h, w, h);
+  ctx.restore();
+}
 
 // ============================================================ the village board
 const TABS = [{ id: 'build', label: 'Build' }, { id: 'upgrade', label: 'Upgrade' }, { id: 'village', label: 'Village' }];
@@ -179,28 +221,19 @@ function boardScene(params) {
 
     // Preview of what you'd actually get.
     const img = Atlas.tryGet(`b.${def.id}.t${Math.min(def.tiers, tier)}`);
-    if (img) {
-      const s = Math.min(1, 46 / Math.max(img.width, img.height));
-      R.blit(img, X + W / 2 - (img.width * s) / 2, Y + 6, { w: img.width * s, h: img.height * s });
-    }
-    let y = Y + 56;
+    drawBuildingPreview(img, X + W / 2, Y + 4, W - 18, 36);
+    let y = Y + 43;
     R.text(def.name, X + W / 2, y, { color: P.ink, shadow: false, align: 'center' }); y += 12;
-    for (const l of Font.wrap(def.blurb || placeNote(def.id), W - 14).slice(0, 3)) {
+    for (const l of shortLines(def.blurb || placeNote(def.id), W - 14, 2)) {
       R.text(l, X + 7, y, { color: P.ink3, shadow: false }); y += 10;
     }
-    y += 2;
-    R.rect(X + 6, y, W - 12, 1, P.ui1); y += 4;
-    R.text(row.kind === 'upgrade' ? 'Gains' : 'Gives you', X + 7, y, { color: P.ui2, shadow: false }); y += 11;
+    // Reserve the benefit area before fitting the description. A three-line
+    // blurb used to push every benefit below the panel's lower edge.
+    R.rect(X + 6, Y + 78, W - 12, 1, P.ui1);
+    R.text(row.kind === 'upgrade' ? 'Gains' : 'Gives you', X + 7, Y + 82, { color: P.ink3, shadow: false });
     const gains = row.kind === 'upgrade' ? gainsFrom(def.id, row.b.tier || 1) : benefitsFor(def.id, 1);
-    const bottom = Y + H - 4;
-    for (const g of (gains || [])) {
-      // Wrap and clip to the panel — benefit text runs long and used to spill off-screen.
-      for (const l of Font.wrap('· ' + g, W - 14)) {
-        if (y + 9 > bottom) return;
-        R.text(l, X + 7, y, { color: P.leaf3, shadow: false });
-        y += 9;
-      }
-    }
+    (gains || []).slice(0, 2).forEach((g, i) =>
+      R.text(fitLine('· ' + g, W - 14), X + 7, Y + 94 + i * 10, { color: P.leaf3, shadow: false }));
   }
 
   function villagePage() {
@@ -278,37 +311,32 @@ function upgradeCardScene(params) {
     render() {
       R.layer(LAYER.UI, () => {
         R.rect(0, 0, R.W, R.H, 'rgba(12,10,18,0.62)');
-        const W = 244, H = 132, X = (R.W - W) / 2, Y = (R.H - H) / 2;
+        const W = 244, H = 140, X = (R.W - W) / 2, Y = (R.H - H) / 2;
         UIx.panel(X, Y, W, H, 'paper');
         if (!def) { R.text('Nothing to upgrade.', X + 12, Y + 12, { color: P.ink2, shadow: false }); return; }
 
         R.text(def.name, X + W / 2, Y + 8, { color: P.ink, shadow: false, align: 'center' });
-        R.text(`Level ${tier}  →  Level ${tier + 1}`, X + W / 2, Y + 20,
-          { color: P.gold3, shadow: false, align: 'center' });
+        R.text(`Level ${tier}  →  Level ${tier + 1}`, X + 12, Y + 20,
+          { color: P.gold3, shadow: false });
+        R.text(money(cost || { coins: 0 }), X + W - 12, Y + 20,
+          { color: can ? P.ink2 : P.hpBad, shadow: false, align: 'right' });
 
         // The literal before/after — this is the whole point of the card.
         const before = Atlas.tryGet(`b.${def.id}.t${tier}`);
         const after = Atlas.tryGet(`b.${def.id}.t${Math.min(def.tiers, tier + 1)}`);
-        const box = 52;
-        const drawAt = (img, cx) => {
-          if (!img) return;
-          const s = Math.min(1, box / Math.max(img.width, img.height));
-          R.blit(img, cx - (img.width * s) / 2, Y + 34 + (box - img.height * s),
-            { w: img.width * s, h: img.height * s });
-        };
+        const box = 46;
+        const drawAt = (img, cx) => drawBuildingPreview(img, cx, Y + 34, box, box);
         drawAt(before, X + 56);
         drawAt(after, X + W - 56);
         const pulse = 0.6 + 0.4 * Math.sin(t / 10);
         R.text('▶', X + W / 2 - 4, Y + 58, { color: P.gold2, shadow: false, alpha: pulse });
-        R.text('now', X + 56, Y + 90, { color: P.ui2, shadow: false, align: 'center' });
-        R.text('next', X + W - 56, Y + 90, { color: P.gold3, shadow: false, align: 'center' });
+        R.text('now', X + 56, Y + 82, { color: P.ink3, shadow: false, align: 'center' });
+        R.text('next', X + W - 56, Y + 82, { color: P.gold3, shadow: false, align: 'center' });
 
-        let y = Y + 100;
+        let y = Y + 96;
         for (const g of (gainsFrom(def.id, tier) || []).slice(0, 2)) {
-          R.text('· ' + g, X + 12, y, { color: P.leaf3, shadow: false }); y += 10;
+          R.text(fitLine('· ' + g, W - 24), X + 12, y, { color: P.leaf3, shadow: false }); y += 11;
         }
-        R.text(money(cost || { coins: 0 }), X + W - 12, Y + 100,
-          { color: can ? P.ink2 : P.hpBad, shadow: false, align: 'right' });
 
         ['Upgrade', 'Not now'].forEach((label, i) => {
           const bx = X + 14 + i * 78, by = Y + H - 18;

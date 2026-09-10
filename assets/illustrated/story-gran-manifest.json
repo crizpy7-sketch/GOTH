@@ -1,0 +1,13 @@
+{
+  "id": "gran",
+  "source": "story-gran-source.png",
+  "expression": 0,
+  "sourceMode": "single",
+  "frameWidth": 448,
+  "frameHeight": 512,
+  "logicalWidth": 112,
+  "logicalHeight": 128,
+  "pixelRatio": 4,
+  "smooth": true,
+  "alphaVerified": true
+}

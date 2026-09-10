@@ -116,6 +116,14 @@ export const Input = {
     return null;
   },
 
+  // A press/release can occur between logical frames. Keep that gesture for a
+  // facing change, without treating a released key as continued movement.
+  tappedDir() {
+    if (!this.enabled) return null;
+    const directions = [...pressed].filter(b => ['up','down','left','right'].includes(b) && !consumed.has(b));
+    return directions.at(-1) || null;
+  },
+
   axis() {
     const x = (this.held('right') ? 1 : 0) - (this.held('left') ? 1 : 0);
     const y = (this.held('down') ? 1 : 0) - (this.held('up') ? 1 : 0);

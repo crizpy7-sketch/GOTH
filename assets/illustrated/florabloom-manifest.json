@@ -1,0 +1,59 @@
+{
+  "id": "florabloom",
+  "source": "florabloom-source.png",
+  "pixelRatio": 4,
+  "smooth": true,
+  "battle": {
+    "logicalWidth": 80,
+    "logicalHeight": 80,
+    "frameWidth": 320,
+    "frameHeight": 320,
+    "views": [
+      "front",
+      "back"
+    ],
+    "scale": 0.40472175379426645
+  },
+  "overworld": {
+    "logicalWidth": 16,
+    "logicalHeight": 16,
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 2,
+    "scale": 0.09666666666666666
+  },
+  "placements": [
+    {
+      "width": 173,
+      "height": 240,
+      "left": 73,
+      "top": 56
+    },
+    {
+      "width": 180,
+      "height": 240,
+      "left": 70,
+      "top": 56
+    },
+    {
+      "width": 41,
+      "height": 58,
+      "left": 11,
+      "top": 4
+    },
+    {
+      "width": 39,
+      "height": 57,
+      "left": 12,
+      "top": 5
+    }
+  ],
+  "sourceGutters": {
+    "x": 627,
+    "y": [
+      627,
+      627
+    ]
+  },
+  "alphaVerified": true
+}

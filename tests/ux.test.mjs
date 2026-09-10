@@ -73,6 +73,15 @@ beforeEach(() => {
 
 const companion = (id, opts = {}) => makeGuardian('embercub', 5, { id, ...opts });
 
+test('released direction taps retain their latest facing edge for exactly one frame', () => {
+  key('keydown','ArrowUp');key('keyup','ArrowUp');
+  key('keydown','ArrowLeft');key('keyup','ArrowLeft');
+  assert.equal(Input.dir(),null);
+  assert.equal(Input.tappedDir(),'left');
+  Input.consume('left');assert.equal(Input.tappedDir(),'up');
+  Input.endFrame();assert.equal(Input.tappedDir(),null);
+});
+
 test('a ready Guardian can become the travelling lead in one action without changing anyone else', () => {
   const team = ['one', 'two', 'three'].map(id => companion(id));
   S.party.push(...team);

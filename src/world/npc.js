@@ -40,6 +40,11 @@ export class Npc {
 
   canStep(nx, ny, blocked) {
     if (this.map.solid(nx, ny)) return false;
+    // Keep entrances and their approach clear. A nearby NPC pauses to chat, so
+    // wandering onto this tile could otherwise block the doorway indefinitely.
+    if (this.map.structures?.some(st => st.door && nx === st.door.x &&
+      (ny === st.door.y || ny === st.door.y + 1))) return false;
+    if (this.map.warps?.some(w => nx === w.x && ny === w.y)) return false;
     if (Math.abs(nx - this.home.x) > this.wander || Math.abs(ny - this.home.y) > this.wander) return false;
     return !blocked(nx, ny);
   }

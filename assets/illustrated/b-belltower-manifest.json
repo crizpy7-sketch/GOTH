@@ -1,0 +1,25 @@
+{
+  "id": "belltower",
+  "tiers": 2,
+  "logicalWidth": 32,
+  "logicalHeight": 64,
+  "pixelRatio": 4,
+  "sharedScale": 0.16981132075471697,
+  "sourceBounds": [
+    {
+      "left": 69,
+      "top": 206,
+      "width": 315,
+      "height": 1395,
+      "structuralAlphaPixels": 324071
+    },
+    {
+      "left": 468,
+      "top": 145,
+      "width": 372,
+      "height": 1484,
+      "structuralAlphaPixels": 363940
+    }
+  ],
+  "structuralAlphaThreshold": 96
+}

@@ -1,0 +1,115 @@
+{
+  "id": "twin",
+  "source": "twin-source.png",
+  "directions": [
+    "down",
+    "up",
+    "left",
+    "right"
+  ],
+  "frames": 4,
+  "frameWidth": 64,
+  "frameHeight": 96,
+  "logicalWidth": 16,
+  "logicalHeight": 24,
+  "sharedScale": 0.3024390243902439,
+  "sourceBounds": [
+    {
+      "left": 91,
+      "top": 12,
+      "width": 197,
+      "height": 285
+    },
+    {
+      "left": 374,
+      "top": 12,
+      "width": 194,
+      "height": 286
+    },
+    {
+      "left": 660,
+      "top": 16,
+      "width": 197,
+      "height": 281
+    },
+    {
+      "left": 944,
+      "top": 15,
+      "width": 197,
+      "height": 285
+    },
+    {
+      "left": 88,
+      "top": 321,
+      "width": 203,
+      "height": 291
+    },
+    {
+      "left": 371,
+      "top": 321,
+      "width": 202,
+      "height": 292
+    },
+    {
+      "left": 658,
+      "top": 323,
+      "width": 205,
+      "height": 289
+    },
+    {
+      "left": 942,
+      "top": 324,
+      "width": 202,
+      "height": 290
+    },
+    {
+      "left": 96,
+      "top": 631,
+      "width": 158,
+      "height": 296
+    },
+    {
+      "left": 379,
+      "top": 634,
+      "width": 171,
+      "height": 293
+    },
+    {
+      "left": 676,
+      "top": 639,
+      "width": 164,
+      "height": 292
+    },
+    {
+      "left": 962,
+      "top": 639,
+      "width": 175,
+      "height": 289
+    },
+    {
+      "left": 98,
+      "top": 947,
+      "width": 162,
+      "height": 294
+    },
+    {
+      "left": 383,
+      "top": 949,
+      "width": 173,
+      "height": 294
+    },
+    {
+      "left": 671,
+      "top": 949,
+      "width": 166,
+      "height": 295
+    },
+    {
+      "left": 957,
+      "top": 953,
+      "width": 175,
+      "height": 288
+    }
+  ],
+  "corrections": []
+}

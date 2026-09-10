@@ -153,6 +153,26 @@ test('doors and objects with no useful action do not advertise a misleading butt
   }
 });
 
+test('wandering villagers keep a cottage entrance and approach available', () => {
+  const map={solid:()=>false,structures:[{door:{x:17,y:9}}],warps:[{x:21,y:33}]};
+  const gran=new Npc({who:'gran',x:18,y:11,wander:3},map);
+  assert.equal(gran.canStep(17,10,()=>false),false,'Gran cannot camp in front of her door');
+  assert.equal(gran.canStep(17,9,()=>false),false,'door tile stays clear');
+  assert.equal(gran.canStep(18,10,()=>false),true,'nearby conversation space stays available');
+  const ranger=new Npc({who:'ranger',x:21,y:32,wander:1},map);
+  assert.equal(ranger.canStep(21,33,()=>false),false,'map exits stay clear');
+});
+
+test('a direction tapped between frames turns the player without taking a step', async t => {
+  const h=await harness(t);
+  t.mock.method(Input,'tappedDir',()=> 'left');
+  h.scene.update();
+  assert.deepEqual([S.player.x,S.player.y,S.player.dir],[5,5,'left']);
+  t.mock.method(Input,'tappedDir',()=>null);
+  for(let i=0;i<20;i++)h.scene.update();
+  assert.deepEqual([S.player.x,S.player.y,S.player.dir],[5,5,'left']);
+});
+
 test('villagers pause beside the player and notice each approach only once', () => {
   const npc = new Npc({ who: 'smith', x: 5, y: 5, wander: 1 }, { solid: () => false });
   npc.cool = 0;

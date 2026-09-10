@@ -14,7 +14,9 @@ Edit this exact 4 by 4 transparent game sprite sheet. Preserve the same characte
 
 ## Hero transparency correction
 
-undefined
+Rejected correction; not used in the game.
+
+Remove ONLY the gray-and-white checkerboard background from this supplied character sheet. Deliver a PNG with real transparent alpha: every checkerboard square must become fully transparent, NOT a drawing of transparency. Preserve all sixteen characters at identical positions, size, colors, poses and detailed edges. The entire area between characters must be empty alpha=0. Do not add ground, shadows outside the feet, new checkerboards, gradients, smoke, outlines, or other content. The output is a transparent cutout sprite sheet used over a game map.
 
 ## Scenery source sheet
 
@@ -22,7 +24,9 @@ Use case stylized-concept. Production transparent environment sprite atlas for a
 
 ## Scenery transparency correction
 
-undefined
+Rejected correction; not used in the game.
+
+Cut out all SIX scenery objects from this exact image onto a genuinely transparent PNG alpha background. Remove ALL of the blurry colored background, the gold/green light hazes between objects and dark backdrop. Preserve the oak, pine, flowering bush, rock, signpost and lantern post at their existing sizes and positions. Preserve their leaves and roots with clean edges. Every pixel outside the objects must be transparent alpha=0, including all gaps between objects. No checkerboard painted in the image, no solid background. This must be a usable six-object transparent sprite sheet.
 
 ## Individual oak (accepted)
 

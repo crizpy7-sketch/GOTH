@@ -1,0 +1,25 @@
+{
+  "id": "gate",
+  "tiers": 2,
+  "logicalWidth": 48,
+  "logicalHeight": 48,
+  "pixelRatio": 4,
+  "sharedScale": 0.29057187017001546,
+  "sourceBounds": [
+    {
+      "left": 12,
+      "top": 387,
+      "width": 604,
+      "height": 556,
+      "structuralAlphaPixels": 125188
+    },
+    {
+      "left": 629,
+      "top": 296,
+      "width": 620,
+      "height": 647,
+      "structuralAlphaPixels": 162495
+    }
+  ],
+  "structuralAlphaThreshold": 96
+}

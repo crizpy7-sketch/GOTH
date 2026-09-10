@@ -1,0 +1,115 @@
+{
+  "id": "rival",
+  "source": "rival-source.png",
+  "directions": [
+    "down",
+    "up",
+    "left",
+    "right"
+  ],
+  "frames": 4,
+  "frameWidth": 64,
+  "frameHeight": 96,
+  "logicalWidth": 16,
+  "logicalHeight": 24,
+  "sharedScale": 0.3164983164983165,
+  "sourceBounds": [
+    {
+      "left": 119,
+      "top": 7,
+      "width": 161,
+      "height": 287
+    },
+    {
+      "left": 397,
+      "top": 7,
+      "width": 162,
+      "height": 290
+    },
+    {
+      "left": 675,
+      "top": 7,
+      "width": 161,
+      "height": 287
+    },
+    {
+      "left": 952,
+      "top": 7,
+      "width": 161,
+      "height": 291
+    },
+    {
+      "left": 117,
+      "top": 322,
+      "width": 161,
+      "height": 297
+    },
+    {
+      "left": 396,
+      "top": 322,
+      "width": 160,
+      "height": 297
+    },
+    {
+      "left": 673,
+      "top": 322,
+      "width": 161,
+      "height": 297
+    },
+    {
+      "left": 950,
+      "top": 322,
+      "width": 162,
+      "height": 297
+    },
+    {
+      "left": 114,
+      "top": 641,
+      "width": 160,
+      "height": 290
+    },
+    {
+      "left": 386,
+      "top": 640,
+      "width": 183,
+      "height": 284
+    },
+    {
+      "left": 673,
+      "top": 641,
+      "width": 161,
+      "height": 290
+    },
+    {
+      "left": 947,
+      "top": 640,
+      "width": 188,
+      "height": 290
+    },
+    {
+      "left": 96,
+      "top": 956,
+      "width": 158,
+      "height": 297
+    },
+    {
+      "left": 380,
+      "top": 956,
+      "width": 183,
+      "height": 285
+    },
+    {
+      "left": 653,
+      "top": 956,
+      "width": 158,
+      "height": 297
+    },
+    {
+      "left": 942,
+      "top": 958,
+      "width": 188,
+      "height": 289
+    }
+  ],
+  "corrections": []
+}

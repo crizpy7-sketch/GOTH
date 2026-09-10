@@ -386,6 +386,8 @@ const ICONS = {
 
 // ---- season / sky icons used by the HUD and the title ----------------------------
 export function seasonIcon(x, y, season) {
+  const illustrated=Atlas.tryGet(`ui.season.${season}`);
+  if(illustrated){R.blit(illustrated,x,y);return;}
   x = Math.round(x); y = Math.round(y);
   if (season === 'summer') {
     R.rect(x + 2, y + 2, 4, 4, P.spark1); R.rect(x + 3, y + 1, 2, 6, P.spark1); R.rect(x + 1, y + 3, 6, 2, P.spark1);
@@ -407,6 +409,8 @@ export function seasonIcon(x, y, season) {
 }
 
 export function skyIcon(x, y, hour) {
+  const illustrated=Atlas.tryGet(hour>=6 && hour<19?'ui.sky.sun':'ui.sky.moon');
+  if(illustrated){R.blit(illustrated,x,y);return;}
   x = Math.round(x); y = Math.round(y);
   const day = hour >= 6 && hour < 19;
   if (day) {

@@ -34,8 +34,8 @@ try {
   const art=await page.evaluate(()=>Object.fromEntries(['story.gran','story.mayor','story.rival','scene.story.cottage'].map(id=>{
     const a=__ATLAS__.get(id);return [id,[a.width,a.height,a.logicalWidth,a.logicalHeight]];
   })));
-  for(const id of ['story.gran','story.mayor','story.rival']) assert.deepEqual(art[id],[336,384,112,128]);
-  assert.deepEqual(art['scene.story.cottage'],[640,360,320,180]);
+  for(const id of ['story.gran','story.mayor','story.rival']) assert.deepEqual(art[id],[448,512,112,128]);
+  assert.deepEqual(art['scene.story.cottage'],[1280,720,320,180]);
   await playTo(page,'choices');await shot(page,'starters');
   await key(page,'Escape');await scene(page,'overworld');
   assert.equal(await page.evaluate(()=>__game.state.party.length),0,'cancelled choice never gives a starter');

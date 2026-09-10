@@ -1,0 +1,13 @@
+{
+  "id": "rival",
+  "source": "story-rival-source.png",
+  "expression": 3,
+  "sourceMode": "portrait",
+  "frameWidth": 448,
+  "frameHeight": 512,
+  "logicalWidth": 112,
+  "logicalHeight": 128,
+  "pixelRatio": 4,
+  "smooth": true,
+  "alphaVerified": true
+}

@@ -18,7 +18,8 @@ test('standalone bundle parses and preserves every source module verbatim',async
     for(const dep of Object.values(mod.deps)) assert.ok(seen.has(dep),`${mod.id} imports ${dep} before its URL exists`);
     seen.add(mod.id);
   }
-  assert.equal(seen.size,51);
+  const manifest=JSON.parse(await readFile(new URL('../scripts/module-manifest.json',import.meta.url),'utf8'));
+  assert.deepEqual([...seen].sort(),manifest.map(m=>m.id).sort());
   assert.ok(!html.includes('__TITLE_ART__'));
   assert.ok(!html.includes('__BATTLE_ART__'));
   assert.ok(!html.includes('__OAK_ART__'));

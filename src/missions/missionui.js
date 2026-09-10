@@ -23,8 +23,11 @@ const TABS = [
   { id: 'done', label: 'Done' },
 ];
 
-const ROW_H = 26;
-const LIST_X = 8, LIST_Y = 34, LIST_W = 156, LIST_H = 132;
+const ROW_H = 25;
+// Leave the full smooth-font line beneath the tabs. Desktop keeps five rows;
+// touch uses four complete rows above its control dock, with the rest scrollable.
+const LIST_X = 8, LIST_Y = 40, LIST_W = 156;
+const listHeight = () => Input.device === 'touch' ? 110 : 126;
 
 const fit = (text, width) => {
   let out = String(text);
@@ -47,7 +50,7 @@ function missionScene(params) {
       if (index >= 0) sel = index;
     }
     sel = clamp(sel, 0, Math.max(0, rows.length - 1));
-    const visible = Math.floor(LIST_H / ROW_H);
+    const visible = Math.floor(listHeight() / ROW_H);
     if (sel < scroll) scroll = sel;
     if (sel >= scroll + visible) scroll = sel - visible + 1;
   }
@@ -139,20 +142,21 @@ function missionScene(params) {
     TABS.forEach((tb, i) => {
       const w = Font.measure(tb.label);
       const on = i === tab;
-      if (on) R.rect(tx - 3, 24, w + 6, 10, P.gold3);
+      if (on) R.rect(tx - 3, 24, w + 6, 12, P.gold3);
       R.text(tb.label, tx, 25, { color: on ? P.gold0 : P.ui2 });
       tx += w + 12;
     });
   }
 
   function drawList() {
-    UIx.panel(LIST_X - 2, LIST_Y - 2, LIST_W + 4, LIST_H + 4, 'paper');
+    const h = listHeight();
+    UIx.panel(LIST_X - 2, LIST_Y - 2, LIST_W + 4, h + 4, 'paper');
     if (!rows.length) {
       R.text(TABS[tab].id === 'done' ? 'Your story starts here.' : 'Nothing here today.', LIST_X + 8, LIST_Y + 16, { color: P.ink3, shadow: false });
       R.text('Choose a mission in All.', LIST_X + 8, LIST_Y + 28, { color: P.ink3, shadow: false });
       return;
     }
-    const visible = Math.floor(LIST_H / ROW_H);
+    const visible = Math.floor(h / ROW_H);
     for (let i = 0; i < visible; i++) {
       const idx = scroll + i;
       const row = rows[idx];
@@ -165,7 +169,7 @@ function missionScene(params) {
     }
     if (scroll + visible < rows.length) {
       const a = Atlas.tryGet('ui.arrow.down');
-      if (a) R.blit(a, LIST_X + LIST_W - 12, LIST_Y + LIST_H - 6);
+      if (a) R.blit(a, LIST_X + LIST_W - 12, LIST_Y + h - 6);
     }
   }
 
@@ -205,7 +209,8 @@ function missionScene(params) {
 
   function drawDetail() {
     const x = LIST_X + LIST_W + 6, w = R.W - x - 8;
-    UIx.panel(x, LIST_Y - 2, w, LIST_H + 4, 'paper');
+    const h = listHeight();
+    UIx.panel(x, LIST_Y - 2, w, h + 4, 'paper');
     const row = rows[sel];
     if (!row) return;
 
@@ -214,7 +219,7 @@ function missionScene(params) {
     let y = LIST_Y + 18;
     for (const l of Font.wrap(row.m.title, w - 16).slice(0, 3)) { R.text(l, x + 8, y, { color: P.ink, shadow: false }); y += 10; }
     y += 3;
-    const rewardY = LIST_Y + LIST_H - 38;
+    const rewardY = LIST_Y + h - 38;
     const lineCount = Math.max(0, Math.floor((rewardY - 7 - y) / 10));
     const visible = lines.slice(0, lineCount);
     if (visible.length && lines.length > lineCount) visible[visible.length - 1] = fit(visible[visible.length - 1] + '…', w - 16);

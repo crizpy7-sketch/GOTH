@@ -1,0 +1,39 @@
+{
+  "id": "hearthstone",
+  "tiers": 4,
+  "logicalWidth": 48,
+  "logicalHeight": 64,
+  "pixelRatio": 4,
+  "sharedScale": 0.37675350701402804,
+  "sourceBounds": [
+    {
+      "left": 75,
+      "top": 194,
+      "width": 408,
+      "height": 428,
+      "structuralAlphaPixels": 92215
+    },
+    {
+      "left": 567,
+      "top": 155,
+      "width": 465,
+      "height": 470,
+      "structuralAlphaPixels": 151572
+    },
+    {
+      "left": 37,
+      "top": 827,
+      "width": 488,
+      "height": 454,
+      "structuralAlphaPixels": 138501
+    },
+    {
+      "left": 549,
+      "top": 742,
+      "width": 499,
+      "height": 562,
+      "structuralAlphaPixels": 173575
+    }
+  ],
+  "structuralAlphaThreshold": 96
+}

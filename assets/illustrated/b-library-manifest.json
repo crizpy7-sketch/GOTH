@@ -1,0 +1,32 @@
+{
+  "id": "library",
+  "tiers": 3,
+  "logicalWidth": 48,
+  "logicalHeight": 64,
+  "pixelRatio": 4,
+  "sharedScale": 0.29984051036682613,
+  "sourceBounds": [
+    {
+      "left": 6,
+      "top": 6,
+      "width": 617,
+      "height": 770,
+      "structuralAlphaPixels": 320440
+    },
+    {
+      "left": 633,
+      "top": 6,
+      "width": 613,
+      "height": 775,
+      "structuralAlphaPixels": 335338
+    },
+    {
+      "left": 1254,
+      "top": 6,
+      "width": 627,
+      "height": 779,
+      "structuralAlphaPixels": 342572
+    }
+  ],
+  "structuralAlphaThreshold": 96
+}
