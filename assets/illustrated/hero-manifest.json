@@ -1,0 +1,28 @@
+{
+  "source": "hero-source.png",
+  "frameWidth": 64,
+  "frameHeight": 96,
+  "logicalWidth": 16,
+  "logicalHeight": 24,
+  "frames": 4,
+  "directions": [
+    "down",
+    "up",
+    "left"
+  ],
+  "mirrorRightFrom": "left",
+  "sourceBands": [
+    [
+      0,
+      322
+    ],
+    [
+      322,
+      322
+    ],
+    [
+      644,
+      310
+    ]
+  ]
+}

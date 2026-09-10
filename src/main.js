@@ -8,7 +8,7 @@ import { R } from './core/renderer.js';
 import { Input, initInput } from './core/input.js';
 import { Scenes } from './core/scene.js';
 import { startLoop, Loop } from './core/loop.js';
-import { buildFont, Font } from './core/font.js';
+import { buildFont, loadIllustratedFont, Font } from './core/font.js';
 import { Audio, defineCoreSfx } from './core/audio.js';
 import { Atlas } from './art/atlas.js';
 import { P } from './art/palette.js';
@@ -45,6 +45,7 @@ export async function boot({ veil, startBtn, setBoot }) {
   const canvas = document.getElementById('screen');
   R.init(canvas);
   buildFont();
+  await loadIllustratedFont();
   initInput();
   defineCoreSfx();
 
@@ -74,6 +75,7 @@ export async function boot({ veil, startBtn, setBoot }) {
   setBoot('remembering…', 68);
   if (Q.get('save') === 'fresh') resetSave();
   else if (hasSave()) load();
+  R.setQuality(S.settings.graphics);
   if (Q.has('seed')) S.seed = parseInt(Q.get('seed'), 10) | 0;
   window.__rng = makeRng(S.seed);
 

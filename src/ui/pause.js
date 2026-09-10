@@ -108,13 +108,14 @@ function settingsScene() {
     ['Reading pace', ['Slow', 'Normal', 'Fast'][(S.settings.textSpeed || 2) - 1]],
     ['Journey hints', S.settings.showHints === false ? 'Off' : 'On'],
     ['Ambient motion', S.settings.reducedMotion ? 'Reduced' : 'Full'],
+    ['Graphics', S.settings.graphics === 'balanced' ? 'Balanced' : 'High detail'],
     ['Save and return to title', ''],
     ['Back to your journey', ''],
   ];
 
   async function change(step = 1) {
-    if (sel === 6) { Scenes.pop(); return; }
-    if (sel === 5) {
+    if (sel === 7) { Scenes.pop(); return; }
+    if (sel === 6) {
       busy = true;
       try {
         if (!await UIx.confirm('Save this journey and return to the title?')) return;
@@ -132,6 +133,10 @@ function settingsScene() {
     } else if (sel === 2) S.settings.textSpeed = ((S.settings.textSpeed || 2) - 1 + step + 3) % 3 + 1;
     else if (sel === 3) S.settings.showHints = S.settings.showHints === false;
     else if (sel === 4) { S.settings.reducedMotion = !S.settings.reducedMotion; R.cinematicFx = !S.settings.reducedMotion; }
+    else if (sel === 5) {
+      S.settings.graphics = S.settings.graphics === 'balanced' ? 'high' : 'balanced';
+      R.setQuality(S.settings.graphics);
+    }
     Audio.sfx('cursor');
     message = save() ? 'Settings saved on this device.' : 'Changed for this session. Save unavailable.';
   }
@@ -141,11 +146,11 @@ function settingsScene() {
     update() {
       if (busy || UIx.busy) return;
       if (Input.pressed('b') || Input.pressed('start')) { Audio.sfx('cancel'); Scenes.pop(); return; }
-      if (Input.nav('down')) { sel = (sel + 1) % 7; Audio.sfx('cursor'); }
-      if (Input.nav('up')) { sel = (sel + 6) % 7; Audio.sfx('cursor'); }
+      if (Input.nav('down')) { sel = (sel + 1) % 8; Audio.sfx('cursor'); }
+      if (Input.nav('up')) { sel = (sel + 7) % 8; Audio.sfx('cursor'); }
       if (Input.pressed('a')) { Input.consume('a'); change(); }
-      else if (sel < 5 && Input.nav('right')) change(1);
-      else if (sel < 5 && Input.nav('left')) change(-1);
+      else if (sel < 6 && Input.nav('right')) change(1);
+      else if (sel < 6 && Input.nav('left')) change(-1);
     },
     render() {
       R.layer(LAYER.UI, () => {
@@ -154,7 +159,7 @@ function settingsScene() {
         Frame.write('SETTINGS', 32, 18, 'paper');
         Frame.write(fit(message, R.W - 64), 32, 30, 'paper', { color: P.ink3 });
         rows().forEach(([name, value], i) => {
-          const y = 47 + i * 16;
+          const y = 45 + i * 14;
           if (sel === i) R.rect(28, y - 3, R.W - 56, 15, mix(P.gold1, P.paper0, 0.5));
           Frame.write(name, 34, y, 'paper');
           Frame.write(value, R.W - 34, y, 'paper', { align: 'right', color: P.gold3 });

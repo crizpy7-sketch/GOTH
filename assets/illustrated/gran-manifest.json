@@ -1,0 +1,16 @@
+{
+  "id": "gran",
+  "source": "gran-source.png",
+  "directions": [
+    "down",
+    "up",
+    "left",
+    "right"
+  ],
+  "frames": 4,
+  "frameWidth": 64,
+  "frameHeight": 96,
+  "logicalWidth": 16,
+  "logicalHeight": 24,
+  "sharedScale": 0.29652996845425866
+}

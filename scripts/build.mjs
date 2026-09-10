@@ -7,16 +7,20 @@ const read = async p => (await readFile(resolve(root, p), 'utf8')).replace(/\r\n
 const asset = async name => `data:image/webp;base64,${(await readFile(resolve(root, 'assets', name))).toString('base64')}`;
 const names = JSON.parse(await read('scripts/module-manifest.json')).map(m => m.id);
 const modules = new Map();
+const font = `data:font/ttf;base64,${(await readFile(resolve(root, 'assets/fonts/Nunito.ttf'))).toString('base64')}`;
 const specifier = /(['"])(\.\.?\/[^'"]*\.js)\1/g;
 for (const id of names) {
   let code = await read(`src/${id}`);
+  code = code.replace('__HEARTH_FONT__', font);
+  for (const dir of ['down', 'up', 'left']) code = code.replace(`__HERO_${dir.toUpperCase()}_ART__`, await asset(`illustrated/hero-${dir}.webp`));
+  for (const dir of ['down', 'up', 'left', 'right']) code = code.replace(`__GRAN_${dir.toUpperCase()}_ART__`, await asset(`illustrated/gran-${dir}.webp`));
   code = code.replace('__GRAN_STORY_ART__', await asset('gran-willow.webp'));
   code = code.replace('__MAYOR_STORY_ART__', await asset('mayor-bramble.webp'));
   code = code.replace('__RIVAL_STORY_ART__', await asset('ash-north.webp'));
   code = code.replace('__COTTAGE_STORY_ART__', await asset('hearth-conversation.webp'));
   code = code.replace('__VILLAGE_STORY_ART__', await asset('hearth-valley.webp'));
-  code = code.replace('__BATTLE_ART__', await asset('forest-clearing.webp'));
-  code = code.replace('__OAK_ART__', await asset('forest-oak.webp'));
+  code = code.replace('__BATTLE_ART__', await asset('illustrated/woodland-battle.webp'));
+  code = code.replace('__OAK_ART__', await asset('illustrated/oak.webp'));
   code = code.replace('__LEAFOWL_FRONT_ART__', await asset('leafowl-front.webp'));
   code = code.replace('__LEAFOWL_BACK_ART__', await asset('leafowl-back.webp'));
   code = code.replace('__AQUARABBIT_FRONT_ART__', await asset('aquarabbit-front.webp'));

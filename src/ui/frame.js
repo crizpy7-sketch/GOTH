@@ -23,17 +23,17 @@ const CORNER = 8;                       // nine-slice corner size (ui.frame is 2
 // ink/sub/shadow are the text tokens; everything else is procedural chrome.
 const STYLES = {
   paper: {
-    atlas: 'ui.frame',
+    atlas: null,
     border: '#3e2b1f', mid: '#b77942', fill: '#fff4d8', hi: '#fffef3', lo: '#d8b77a',
     ink: P.ink2, sub: P.ink3, shadow: false, accent: P.gold3, sel: P.gold0, selEdge: P.gold2,
   },
   dark: {
-    atlas: 'ui.frame.dark',
-    border: '#0f0a07', mid: P.ink3, fill: P.ui4, hi: '#4a3826', lo: '#150e09',
+    atlas: null,
+    border: '#0b1013', mid: '#977442', fill: '#192126', hi: '#30383a', lo: '#11171b',
     ink: P.ui0, sub: P.ui1, shadow: P.black, accent: P.gold1, sel: P.ink3, selEdge: P.gold2,
   },
   gold: {
-    atlas: 'ui.frame.gold',
+    atlas: null,
     border: P.ink, mid: P.gold3, fill: P.gold1, hi: P.gold0, lo: P.gold2,
     ink: P.ink, sub: P.ink2, shadow: false, accent: P.ink, sel: P.gold0, selEdge: P.ink2,
   },
@@ -79,14 +79,21 @@ function rrect(x, y, w, h, color) {
 }
 
 function procPanel(x, y, w, h, s) {
-  rrect(x, y, w, h, s.border);
-  rrect(x + 1, y + 1, w - 2, h - 2, s.mid);
-  rrect(x + 2, y + 2, w - 4, h - 4, s.fill);
-  // inner bevel: light top, shaded bottom-right — reads as a raised card
-  R.rect(x + 3, y + 2, w - 6, 1, s.hi);
-  R.rect(x + 2, y + 3, 1, h - 6, s.hi);
-  R.rect(x + 3, y + h - 3, w - 6, 1, s.lo);
-  R.rect(x + w - 3, y + 3, 1, h - 6, s.lo);
+  if (w <= 0 || h <= 0) return;
+  const ctx = R.ctx;
+  ctx.save();
+  const radius = Math.min(3, w / 2, h / 2);
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, radius);
+  const fill = ctx.createLinearGradient(x, y, x, y + h);
+  fill.addColorStop(0, mix(s.fill, s.hi, .18));
+  fill.addColorStop(1, s.fill);
+  ctx.fillStyle = fill; ctx.fill();
+  ctx.lineWidth = .8; ctx.strokeStyle = s.mid; ctx.stroke();
+  if (w > 5 && h > 5) {
+    ctx.beginPath(); ctx.roundRect(x + 1.5, y + 1.5, w - 3, h - 3, Math.max(.5, radius - 1));
+    ctx.lineWidth = .35; ctx.strokeStyle = mix(s.hi, s.fill, .5); ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function nineSlice(img, x, y, w, h, c = CORNER) {

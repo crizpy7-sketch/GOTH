@@ -64,6 +64,15 @@ generation prompts are documented in [assets/ARTWORK.md](assets/ARTWORK.md).
 
 ## Develop
 
+The illustrated adventure upgrade is in progress on its feature branch. See
+[release scope and evidence](ILLUSTRATED_RELEASE.md) and
+[production art prompts](assets/ILLUSTRATED_PROMPTS.md). Balanced graphics defaults
+to a 960×540 render surface; Settings also offers High detail at 1280×720.
+Both modes use the same art, smooth embedded typography, and gameplay coordinates.
+The new asset preparation helpers require Sharp; normal builds use committed art.
+Run `npm run test:illustrated` with the preview server running to check the new
+font, character sheets, and graphics modes at desktop and two mobile sizes.
+
 Requires Node.js 20 or newer. The editable source lives in `src/`; **index.html is generated**. No runtime framework or external network request is required.
 
 ```sh

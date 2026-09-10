@@ -11,6 +11,32 @@ let sheet = null;                 // white master sheet
 const rects = new Map();          // char -> {x,y,w,h}
 const tinted = new Map();         // color -> canvas
 let built = false;
+let smoothContext = null;
+const BODY_FONT = '650 8px HearthText, sans-serif';
+const smoothWidths = new Map(), smoothRuns = new Map();
+function remember(cache, key, value, limit) {
+  if (cache.size >= limit) cache.delete(cache.keys().next().value);
+  cache.set(key, value);
+  return value;
+}
+
+// Load before gameplay so measuring, wrapping, and painting use the same face.
+// The bitmap face remains available if the embedded font cannot load.
+export async function loadIllustratedFont() {
+  if (typeof FontFace === 'undefined' || !document.fonts) return false;
+  try {
+    const face = new FontFace('HearthText', 'url(__HEARTH_FONT__)', { weight: '200 900' });
+    await face.load();
+    document.fonts.add(face);
+    smoothContext = document.createElement('canvas').getContext('2d');
+    smoothContext.font = BODY_FONT;
+    smoothWidths.clear(); smoothRuns.clear();
+    return true;
+  } catch (error) {
+    console.warn('[font] using readable fallback', error);
+    return false;
+  }
+}
 
 function cv(w, h) {
   const c = document.createElement('canvas');
@@ -68,6 +94,10 @@ export const Font = {
   get box() { return FONT.box; },
 
   measure(str) {
+    if (smoothContext) {
+      const text = String(str);
+      return smoothWidths.get(text) ?? remember(smoothWidths, text, smoothContext.measureText(text).width, 2048);
+    }
     let w = 0;
     for (const ch of String(str)) w += advance(ch);
     return Math.max(0, w - FONT.gap);
@@ -102,6 +132,33 @@ export const Font = {
   // opts: {color, shadow (color|false), align:'left'|'center'|'right', alpha, limit}
   // `limit` renders only the first N visible characters (typewriter effect).
   draw(ctx, str, x, y, opts = {}) {
+    if (smoothContext) {
+      const text = String(str);
+      const shown = opts.limit === undefined ? text : text.slice(0, Math.max(0, opts.limit));
+      const width = this.measure(text);
+      const left = opts.align === 'center' ? x - width / 2 : opts.align === 'right' ? x - width : x;
+      if (!shown) return width;
+      const color = opts.color || '#f4ecd8', shadow = opts.shadow === false ? false : opts.shadow || '#171a1c';
+      const key = JSON.stringify([shown, color, shadow]);
+      let run = smoothRuns.get(key);
+      if (!run) {
+        // Bake a native-font run once at the highest supported resolution. This
+        // avoids re-rasterizing identical HUD/menu text on every gameplay frame.
+        run = document.createElement('canvas');
+        run.width = Math.max(1, Math.ceil((this.measure(shown) + 1) * 4)); run.height = 44;
+        const ink = run.getContext('2d'); ink.scale(4, 4); ink.font = BODY_FONT;
+        ink.textBaseline = 'alphabetic'; ink.textAlign = 'left';
+        if (shadow) { ink.fillStyle = shadow; ink.fillText(shown, 0, 7.75); }
+        ink.fillStyle = color; ink.fillText(shown, 0, 7);
+        remember(smoothRuns, key, run, 512);
+      }
+      ctx.save();
+      if (opts.alpha !== undefined) ctx.globalAlpha *= opts.alpha;
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
+      ctx.drawImage(run, left, y, run.width / 4, 11);
+      ctx.restore();
+      return width;
+    }
     if (!built) buildFont();
     const s = String(str);
     const color = opts.color || '#f4ecd8';
