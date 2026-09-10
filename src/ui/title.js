@@ -4,7 +4,7 @@ import { Input } from '../core/input.js';
 import { Scenes } from '../core/scene.js';
 import { Audio } from '../core/audio.js';
 import { UIx, Hooks } from '../core/bridge.js';
-import { S, hasSave, load, defaults, adopt, save } from '../state.js';
+import { S, hasSave, load, save, startNewJourney, profileRows, currentProfileId, saveIssue } from '../state.js';
 import { START } from '../world/maps.js';
 
 function titleScene() {
@@ -34,11 +34,12 @@ function titleScene() {
       Audio.sfx('confirm');
       if (it.id === 'settings') { await settings(); return; }
       if (it.id === 'new') {
-        if (saved && !(await UIx.confirm('Starting a new journey will replace the one you have. Are you sure?'))) return;
-        const preferences = {...S.settings};
-        adopt(defaults()); S.settings = preferences;
-        Object.assign(S.player, START);
-        save();
+        const row = profileRows().find(p => p.id === currentProfileId());
+        if ((saved || row?.status === 'saved' || row?.status === 'invalid') && !(await UIx.confirm(`Start a new journey for ${row?.name || 'this profile'}? Only this profile's current journey will be replaced. Other family journeys stay safe.`))) return;
+        if (!startNewJourney(START)) {
+          await UIx.say(saveIssue() === 'conflict' ? 'This journey changed in another tab. Reload to use the latest save.' : 'Could not save a new journey. Your previous journey is still safe. Check device storage and try again.');
+          return;
+        }
       }
       await UIx.fade('out', 16);
       Scenes.reset('overworld');
@@ -89,7 +90,9 @@ function titleScene() {
         return button;
       });
       menu?.replaceChildren(...buttons);
-      if (summary) summary.textContent = saved ? `${saved.name} · Village level ${saved.level} · Day ${saved.day}` : 'A new place to call home.';
+      const row = profileRows().find(p => p.id === currentProfileId());
+      if (summary) summary.textContent = saved ? `${saved.name} · Village level ${saved.level} · Day ${saved.day}`
+        : row?.status === 'invalid' ? 'Existing save needs attention. It has been kept unchanged.' : 'A new place to call home.';
       sync();
       if (Audio.hasSong('title')) Audio.play('title');
     },

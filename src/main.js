@@ -12,11 +12,12 @@ import { buildFont, loadIllustratedFont, Font } from './core/font.js';
 import { Audio, defineCoreSfx } from './core/audio.js';
 import { Atlas } from './art/atlas.js';
 import { P } from './art/palette.js';
-import { S, load, save, hasSave, resetSave, defaults, adopt, loadPreferences } from './state.js';
+import { S, load, save, hasSave, resetSave, defaults, adopt, loadPreferences, initProfiles } from './state.js';
 import { Bus, EV } from './core/events.js';
 import { makeRng } from './core/rng.js';
 import { Hooks } from './core/bridge.js';
 import { initListening, tickListening } from './ui/listening.js';
+import { initFamilyProfiles, tickFamilyProfiles } from './ui/profiles.js';
 
 export const Q = new URLSearchParams(location.search);
 export const DEV = Q.has('dev');
@@ -74,6 +75,7 @@ export async function boot({ veil, startBtn, setBoot }) {
 
   // ---- state ----
   setBoot('remembering…', 68);
+  initProfiles();
   if (Q.get('save') === 'fresh') resetSave();
   else if (hasSave()) load();
   if (!hasSave()) loadPreferences();
@@ -125,6 +127,7 @@ export async function boot({ veil, startBtn, setBoot }) {
   Audio.muted = !!S.settings.muted;
   Audio.setVolume(S.settings.volume);
   initListening();
+  initFamilyProfiles();
 
   // ---- main loop ----
   setBoot('ready', 100);
@@ -163,6 +166,7 @@ export async function boot({ veil, startBtn, setBoot }) {
         }
         if (!portrait) Scenes.update(1 / 60);
         tickListening();
+        tickFamilyProfiles();
       }
       Input.endFrame();
     },
@@ -187,8 +191,8 @@ export async function boot({ veil, startBtn, setBoot }) {
   }
 
   // Autosave on a slow cadence and whenever the tab goes away.
-  setInterval(() => { if (started && hasSave() && Scenes.topName !== 'title') save(); }, 20000);
-  addEventListener('visibilitychange', () => { if (document.hidden && started && hasSave()) save(); });
+  setInterval(() => { if (started && hasSave() && Scenes.isActive('overworld')) save(); }, 20000);
+  addEventListener('visibilitychange', () => { if (document.hidden && started && hasSave() && Scenes.isActive('overworld')) save(); });
 
   return { started: () => started };
 }

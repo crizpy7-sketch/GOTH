@@ -1,4 +1,5 @@
 [
+  { "id": "ui/profiles.js", "deps": {} },
   { "id": "core/narration.js", "deps": {} },
   { "id": "ui/listening.js", "deps": {} },
   {

@@ -10,7 +10,8 @@
     "test:story": "node scripts/verify-story-browser.mjs",
     "test:illustrated": "node scripts/verify-illustrated-browser.mjs",
     "test:journey": "node scripts/verify-opening-journey.mjs",
-    "test:sound": "node scripts/verify-sound-browser.mjs"
+    "test:sound": "node scripts/verify-sound-browser.mjs",
+    "test:family": "node scripts/verify-family-browser.mjs"
   },
   "devDependencies": { "playwright": "1.62.1" }
 }
