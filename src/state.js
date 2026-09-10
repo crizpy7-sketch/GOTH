@@ -7,6 +7,7 @@ import { Bus, EV } from './core/events.js';
 
 export const VERSION = 4;
 const KEY = 'hearth.save.v1';
+const PREFERENCES_KEY = 'hearth.preferences.v1';
 
 export function defaults() {
   return {
@@ -47,7 +48,9 @@ export function defaults() {
     clock: { day: 1, hour: 8, minute: 0, season: 'spring', weather: 'clear' },
 
     flags: {},
-    settings: { volume: 0.7, muted: false, textSpeed: 2, showGrid: false, showHints: true, reducedMotion: false, graphics: 'balanced' },
+    settings: { volume: 0.7, musicVolume: 0.5, effectsVolume: 0.9, muted: false,
+      readAloud: false, voiceURI: '', voiceRate: 0.88, voiceVolume: 0.9,
+      textSpeed: 2, showGrid: false, showHints: true, reducedMotion: false, graphics: 'balanced' },
 
     stats: { steps: 0, battles: 0, wins: 0, bonded: 0, built: 0, missionsDone: 0 },
   };
@@ -81,6 +84,23 @@ export function save() {
 
 export function hasSave() {
   try { return !!localStorage.getItem(KEY); } catch { return false; }
+}
+
+// Choosing a reading voice on the title must not manufacture a journey save.
+export function savePreferences() {
+  try { localStorage.setItem(PREFERENCES_KEY, JSON.stringify(S.settings)); return true; }
+  catch { return false; }
+}
+
+export function loadPreferences() {
+  try {
+    const raw = localStorage.getItem(PREFERENCES_KEY);
+    if (!raw) return false;
+    const settings = JSON.parse(raw);
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return false;
+    S.settings = normalizeState({ ...S, settings: { ...defaults().settings, ...settings } }).settings;
+    return true;
+  } catch { return false; }
 }
 
 export function load() {
@@ -189,6 +209,12 @@ export function normalizeState(state) {
   state.settings ||= { ...base.settings };
   state.settings.volume = finite(state.settings.volume, 0.7, 0, 1);
   state.settings.muted = !!state.settings.muted;
+  state.settings.musicVolume = finite(state.settings.musicVolume, 0.5, 0, 1);
+  state.settings.effectsVolume = finite(state.settings.effectsVolume, 0.9, 0, 1);
+  state.settings.readAloud = state.settings.readAloud === true;
+  state.settings.voiceURI = typeof state.settings.voiceURI === 'string' ? state.settings.voiceURI.slice(0, 300) : '';
+  state.settings.voiceRate = finite(state.settings.voiceRate, 0.88, 0.65, 1.15);
+  state.settings.voiceVolume = finite(state.settings.voiceVolume, 0.9, 0, 1);
   state.settings.textSpeed = Math.round(finite(state.settings.textSpeed, 2, 1, 3));
   state.settings.showGrid = !!state.settings.showGrid;
   state.settings.showHints = state.settings.showHints !== false;

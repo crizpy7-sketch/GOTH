@@ -52,9 +52,15 @@ try {
   await page.getByRole('button',{name:'Begin your journey'}).press('ArrowDown');
   await page.waitForTimeout(80);
   assert.equal(await page.evaluate(()=>document.activeElement.textContent),'Settings');
-  await page.keyboard.press('Enter');await scene('__say');
-  await page.waitForTimeout(180);await page.keyboard.press('Escape');await page.waitForTimeout(120);
+  await page.keyboard.press('Enter');await scene('sound-settings');
+  assert.equal(await page.locator('#soundPanel').isVisible(),true,'title Settings opens the native sound and reading controls');
+  const beforeSettings=await page.evaluate(()=>({...__game.state.player}));
+  await page.locator('#sound-volume').focus();
+  await page.keyboard.press('ArrowLeft');
+  assert.deepEqual(await page.evaluate(()=>__game.state.player),beforeSettings,'native sound fields do not move the player');
+  assert.equal(await page.evaluate(()=>localStorage.getItem('hearth.save.v1')),null,'title preferences do not create a journey save');
   await page.keyboard.press('Escape');await scene('title');
+  assert.equal(await page.locator('#soundPanel').isVisible(),false,'Escape returns from sound settings');
   await page.getByRole('button',{name:'Begin your journey'}).click();
   await scene('__say');
   for(let i=0;i<24 && await page.evaluate(()=>__game.scene!=='overworld');i++) {

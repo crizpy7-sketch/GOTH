@@ -12,10 +12,11 @@ import { buildFont, loadIllustratedFont, Font } from './core/font.js';
 import { Audio, defineCoreSfx } from './core/audio.js';
 import { Atlas } from './art/atlas.js';
 import { P } from './art/palette.js';
-import { S, load, save, hasSave, resetSave, defaults, adopt } from './state.js';
+import { S, load, save, hasSave, resetSave, defaults, adopt, loadPreferences } from './state.js';
 import { Bus, EV } from './core/events.js';
 import { makeRng } from './core/rng.js';
 import { Hooks } from './core/bridge.js';
+import { initListening, tickListening } from './ui/listening.js';
 
 export const Q = new URLSearchParams(location.search);
 export const DEV = Q.has('dev');
@@ -75,6 +76,7 @@ export async function boot({ veil, startBtn, setBoot }) {
   setBoot('remembering…', 68);
   if (Q.get('save') === 'fresh') resetSave();
   else if (hasSave()) load();
+  if (!hasSave()) loadPreferences();
   R.setQuality(S.settings.graphics);
   if (Q.has('seed')) S.seed = parseInt(Q.get('seed'), 10) | 0;
   window.__rng = makeRng(S.seed);
@@ -122,6 +124,7 @@ export async function boot({ veil, startBtn, setBoot }) {
   R.cinematicFx = !S.settings.reducedMotion && !matchMedia('(prefers-reduced-motion: reduce)').matches;
   Audio.muted = !!S.settings.muted;
   Audio.setVolume(S.settings.volume);
+  initListening();
 
   // ---- main loop ----
   setBoot('ready', 100);
@@ -159,6 +162,7 @@ export async function boot({ veil, startBtn, setBoot }) {
           world.daynight?.tickClock?.();
         }
         if (!portrait) Scenes.update(1 / 60);
+        tickListening();
       }
       Input.endFrame();
     },
@@ -183,8 +187,8 @@ export async function boot({ veil, startBtn, setBoot }) {
   }
 
   // Autosave on a slow cadence and whenever the tab goes away.
-  setInterval(() => { if (started && Scenes.topName !== 'title') save(); }, 20000);
-  addEventListener('visibilitychange', () => { if (document.hidden && started) save(); });
+  setInterval(() => { if (started && hasSave() && Scenes.topName !== 'title') save(); }, 20000);
+  addEventListener('visibilitychange', () => { if (document.hidden && started && hasSave()) save(); });
 
   return { started: () => started };
 }

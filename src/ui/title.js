@@ -56,6 +56,7 @@ function titleScene() {
     } finally { busy=false; sync(); }
   }
   async function settings() {
+    if (Scenes.has('sound-settings')) { await Scenes.pushAsync('sound-settings'); return; }
     for (;;) {
       const i = await UIx.ask('Make yourself at home', [
         Audio.muted ? 'Sound: off' : 'Sound: on',
@@ -74,6 +75,7 @@ function titleScene() {
     }
   }
   return {
+    get readingText() { return `Welcome to Guardians of the Hearth. ${items[sel]?.label || 'Begin your journey'}.`; },
     enter() {
       if (hasSave() && load()) saved = {name:S.player.name,level:S.village.level,day:S.clock.day};
       items = saved ? [{id:'continue',label:'Continue journey'},{id:'new',label:'New journey'},{id:'settings',label:'Settings'}]

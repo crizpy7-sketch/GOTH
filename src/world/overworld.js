@@ -914,6 +914,7 @@ export function register() {
     },
     currentMap() { return map; },
     lockInput(v) { busy = !!v; },
+    get inputLocked() { return busy; },
   });
 }
 

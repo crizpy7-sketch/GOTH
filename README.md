@@ -14,8 +14,19 @@ A cozy creature-bonding and village-building RPG. Explore Emberhollow, meet its 
 | Run | Shift | X | Hold outer stick |
 | Journal | M | Menu | Menu |
 | Village shortcut | C | View | Journal → Village |
+| Read / stop current caption | L | — | Listen / Stop |
 
 On phones, play in landscape. Translucent controls overlay the playfield edges, move clear of dialogue, and switch to precise arrows in menus. The fullscreen button appears on supported browsers. The title menu supports mouse, touch, keyboard, and controller. Settings include sound, volume, text speed, journey hints, reduced motion, and graphics quality.
+
+## Sound and reading companion
+
+Choose **Read to me: On** on the title screen for a gentle voice that follows dialogue, important conversations, choices, journey hints, missions, and battle captions. The whole caption appears immediately while reading is enabled. Story pages and decisions wait for you; battle captions wait while the voice is speaking, and A can skip ahead. Use **Listen** to repeat a caption and **Stop** to pause the voice.
+
+Open **Voice & sound** below the game, or **Journal → Settings → Sound & reading**, to preview a device voice, choose a speaking pace, and adjust voice, music, effects, and overall volume separately. Automatic reading starts off. Settings stay on this device and choosing a voice before beginning does not create a saved journey.
+
+The soundtrack uses softer plucked notes, quiet woodland and hearth ambience, and distinct reward sounds. Music and effects lower while the voice speaks and recover afterward. Switching tabs stops speech and suspends the soundscape.
+
+Reading uses the browser's speech engine, with an English device voice selected automatically when available. No microphone or account is needed. Voice quality and availability depend on the device; some voices need an internet connection even though the game and music work offline. Captions remain playable if speech is unavailable. See [sound release scope and testing](SOUND_RELEASE.md).
 
 ## Illustrated opening
 
@@ -78,6 +89,7 @@ The new asset preparation helpers require Sharp; normal builds use committed art
 Run `npm run test:illustrated` with the preview server running to check the new
 font, character sheets, and graphics modes at desktop and two mobile sizes.
 Run `npm run test:journey` for the opening playthrough using actual controls and a disposable save.
+Run `npm run test:sound` for reading lifecycle, settings, audio activation, and landscape layout checks.
 
 Requires Node.js 20 or newer. The editable source lives in `src/`; **index.html is generated**. No runtime framework or external network request is required.
 

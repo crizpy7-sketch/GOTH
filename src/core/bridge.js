@@ -99,6 +99,7 @@ export const Hooks = {
     playerTile() { return { x: 0, y: 0, dir: 'down', map: 'village' }; },
     currentMap() { return null; },
     lockInput(v) {},
+    get inputLocked() { return false; },
   },
 
   /** ui/hud.js — the overworld HUD. The world calls draw() every frame. */
