@@ -337,6 +337,45 @@
     .sound-heading h1 { font-size:21px; } #readingStatus { font-size:12px; } }
   @media(max-width:600px) { #readingRail { gap:6px; padding-left:9px; } #readingRail button { padding:7px 9px; font-size:13px; }
     .sound-grid { gap:6px 16px; } }
+  .title-family { position:absolute; top:5%; right:4%; display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+  #titleProfiles { min-height:44px; padding:9px 15px; border:1px solid #c1a778; border-radius:10px;
+    background:#17372feb; color:#fff0cc; font:650 15px HearthText,system-ui,sans-serif; cursor:pointer; }
+  #titleProfileName { max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; color:#ffebbd; text-shadow:0 2px 5px #000; }
+  #familyPanel { position:absolute; inset:0; z-index:9; display:grid; place-items:center; padding:12px;
+    background:#071710ed; color:#fff0d1; touch-action:pan-y; }
+  #familyPanel[hidden], #saveNotice[hidden], #profileConfirm[hidden], #profileRename[hidden] { display:none; }
+  body.profiles-open #touch, body.profiles-open #readingRail { visibility:hidden; }
+  body.profiles-open #saveNotice { display:none; }
+  .family-card { width:min(860px,100%); max-height:100%; overflow:auto; overscroll-behavior:contain;
+    padding:24px; border:1px solid #a59161; border-radius:20px; background:linear-gradient(145deg,#2b4335,#13261e); touch-action:pan-y; }
+  .family-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .family-card h1 { color:#efd7a1; font-size:28px; } .family-card h2 { font-size:21px; color:#efd7a1; }
+  .family-card p { margin:8px 0 14px; line-height:1.5; font-size:14px; color:#dbe2d0; }
+  .family-card button { min-height:44px; padding:10px 14px; border:1px solid #a99462; border-radius:9px;
+    background:#e7d1a0; color:#173729; font:650 15px HearthText,system-ui,sans-serif; cursor:pointer; }
+  .family-card button:disabled { opacity:.55; cursor:default; }
+  #profileList { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:18px 0; }
+  #profileList button { min-height:114px; padding:14px 12px; display:flex; flex-direction:column; align-items:flex-start; gap:6px;
+    background:#1a332a; color:#f5e5bf; text-align:left; }
+  #profileList strong { font-size:18px; overflow-wrap:anywhere; }
+  #profileList span { font-size:12px; font-weight:400; } #profileList .profile-mark { color:#a9c6a6; font-size:11px; }
+  #profileList button[aria-pressed=true] { border:2px solid #e9ca85; background:#385240; padding:13px 11px; }
+  .profile-details { padding-top:14px; border-top:1px solid #6d8062; }
+  #profileRename { display:flex; align-items:flex-end; flex-wrap:wrap; gap:10px; margin:12px 0; }
+  #profileRename label { display:flex; flex-direction:column; gap:6px; font-size:13px; }
+  #profileName { width:260px; max-width:100%; min-height:44px; padding:8px 10px; border-radius:8px; border:1px solid #7f9978;
+    background:#11291e; color:#fff0d0; font:16px HearthText,system-ui,sans-serif; }
+  .profile-actions { display:flex; flex-wrap:wrap; gap:10px; } .family-card .secondary { background:#233f31; color:#efdbaf; }
+  #profileConfirm { margin-top:12px; padding:14px; border:1px solid #aa9460; border-radius:12px; background:#152c22; }
+  #profileNotice { min-height:22px; color:#f3d591; margin-bottom:0; }
+  #saveNotice { position:absolute; z-index:10; left:12px; right:12px; top:12px; display:flex; align-items:center; gap:12px;
+    padding:10px 14px; border:1px solid #d0a262; border-radius:9px; background:#412d18f5; color:#fff3d4; font-size:14px; }
+  #saveNoticeText { flex:1; } #profileReload { min-height:44px; padding:8px 12px; border:1px solid #dec188; border-radius:7px; background:#eed7a7; color:#352313; }
+  .family-card button:focus-visible, #profileName:focus-visible, #titleProfiles:focus-visible, #profileReload:focus-visible { outline:3px solid #fff0ad; outline-offset:3px; }
+  @media(max-width:700px) { #profileList { grid-template-columns:repeat(2,minmax(0,1fr)); } .family-card { padding:16px; }
+    .family-card h1 { font-size:24px; } #profileList button { min-height:94px; } }
+  @media(max-height:450px) { .family-card { padding:14px 20px; } .title-family { top:5%; right:3%; }
+    #titleProfiles { min-height:44px; padding:8px 10px; font-size:13px; } #titleProfileName { font-size:11px; max-width:160px; } }
 </style>
 </head>
 <body>
@@ -344,6 +383,7 @@
     <div id="playfield">
       <div id="stage"><canvas id="screen" width="320" height="180" tabindex="0" aria-label="Guardians of the Hearth game. Move with arrow keys or WASD, E to interact, M for journal."></canvas></div>
       <section id="titleScreen" aria-label="Main menu" hidden>
+        <div class="title-family"><button type="button" id="titleProfiles">Family profiles</button><span id="titleProfileName">Original journey</span></div>
         <div class="title-content">
           <p class="title-eyebrow">A little magic. A place to belong.</p>
           <h1>Guardians<span>of the Hearth</span></h1>
@@ -368,6 +408,22 @@
         <button type="button" class="btn f" id="tF" tabindex="-1" aria-label="Enter fullscreen" hidden>⛶</button>
       </div>
     </div>
+    <section id="familyPanel" role="dialog" aria-modal="true" aria-labelledby="familyHeading" hidden>
+      <div class="family-card">
+        <div class="family-heading"><h1 id="familyHeading">A hearth for everyone</h1><button type="button" id="profileClose" class="secondary">Done</button></div>
+        <p>Five kids, two parents, seven little worlds. Each person gets their own village, companions and reading settings.</p>
+        <p><strong>Saved only in this browser on this device.</strong> Profiles do not sync between devices. Online visits are not available yet.</p>
+        <div id="profileList" role="group" aria-label="Choose a family profile"></div>
+        <div class="profile-details">
+          <h2 id="profileSelected"></h2><p id="profileDescription"></p>
+          <form id="profileRename"><label for="profileName">Profile name<input id="profileName" maxlength="24" autocomplete="off" spellcheck="false" required></label><button type="submit" class="secondary">Save name</button></form>
+          <div class="profile-actions"><button type="button" id="profileUse">Play as this profile</button><button type="button" id="profileCopy" class="secondary">Copy original journey here</button></div>
+          <div id="profileConfirm" hidden><p id="profileCopyText"></p><div class="profile-actions"><button type="button" id="profileCopyCancel" class="secondary">Keep empty</button><button type="button" id="profileCopyConfirm">Make a separate copy</button></div></div>
+          <p id="profileNotice" role="status"></p>
+        </div>
+      </div>
+    </section>
+    <aside id="saveNotice" role="alert" hidden><span id="saveNoticeText"></span><button type="button" id="profileReload" hidden>Reload latest save</button></aside>
     <section id="soundPanel" role="dialog" aria-modal="true" aria-labelledby="soundHeading" hidden>
       <div class="sound-card">
         <div class="sound-heading"><h1 id="soundHeading">Sound & reading</h1><button type="button" id="soundClose">Done</button></div>

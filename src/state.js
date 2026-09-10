@@ -8,6 +8,121 @@ import { Bus, EV } from './core/events.js';
 export const VERSION = 4;
 const KEY = 'hearth.save.v1';
 const PREFERENCES_KEY = 'hearth.preferences.v1';
+const ACTIVE_KEY = 'hearth.family.active.v1';
+const FAMILY_KEY = 'hearth.family.names.v1';
+export const LEGACY_BACKUP_KEY = 'hearth.backup.legacy.v1';
+export const FAMILY_SLOTS = Object.freeze(Array.from({ length: 7 }, (_, i) => Object.freeze({
+  id: i < 5 ? `child${i + 1}` : `parent${i - 4}`,
+  name: i < 5 ? `Child ${i + 1}` : `Parent ${i - 4}`,
+})));
+let activeProfile = 'legacy', protectedStorage = false, expectedSave, expectedPreferences;
+let persistenceIssue = '';
+const validProfile = id => id === 'legacy' || FAMILY_SLOTS.some(p => p.id === id);
+export const profileSaveKey = (id = activeProfile) => id === 'legacy' ? KEY : `hearth.profile.${id}.save.v1`;
+const preferenceKey = () => activeProfile === 'legacy' ? PREFERENCES_KEY : `hearth.profile.${activeProfile}.preferences.v1`;
+export const currentProfileId = () => activeProfile;
+export const saveIssue = () => persistenceIssue;
+
+// Active ownership belongs to this tab, never to the latest active slot in another
+// tab. Compare the exact last-loaded bytes before every write to catch stale saves.
+export function initProfiles() {
+  activeProfile = 'legacy'; protectedStorage = true; persistenceIssue = '';
+  try {
+    const selected = localStorage.getItem(ACTIVE_KEY);
+    if (validProfile(selected)) activeProfile = selected;
+    expectedSave = localStorage.getItem(profileSaveKey());
+    expectedPreferences = localStorage.getItem(preferenceKey());
+  } catch { expectedSave = expectedPreferences = undefined; persistenceIssue = 'unavailable'; }
+}
+
+function readSaved(raw) {
+  if (!raw) return null;
+  const value = JSON.parse(raw);
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      !value.player || typeof value.player !== 'object' || Array.isArray(value.player) ||
+      (value.version !== undefined && (!Number.isInteger(value.version) || value.version > VERSION))) return null;
+  return normalizeState(deepMerge(defaults(), migrate(value)));
+}
+
+function checkWrite(key, expected) {
+  if (!protectedStorage) return;
+  if (persistenceIssue === 'conflict' || localStorage.getItem(key) !== expected) {
+    persistenceIssue = 'conflict'; throw new Error('Journey changed in another tab');
+  }
+}
+
+export function profileRows() {
+  let names = {};
+  try { const data = JSON.parse(localStorage.getItem(FAMILY_KEY) || '{}'); if (data && typeof data === 'object' && !Array.isArray(data)) names = data; } catch {}
+  return [...FAMILY_SLOTS, {id:'legacy', name:'Original journey'}].map(slot => {
+    let status = 'empty', summary = null;
+    try {
+      const raw = localStorage.getItem(profileSaveKey(slot.id));
+      if (raw !== null) {
+        try { const state = readSaved(raw); if (state) { status = 'saved'; summary = { name:state.player.name, level:state.village.level, day:state.clock.day }; } else status = 'invalid'; }
+        catch { status = 'invalid'; }
+      }
+    } catch { status = 'unavailable'; }
+    const custom = typeof names[slot.id] === 'string' ? names[slot.id].trim().slice(0,24) : '';
+    return {...slot, name:slot.id === 'legacy' ? slot.name : custom || slot.name, status, summary, active:slot.id === activeProfile};
+  });
+}
+
+export function renameProfile(id, name) {
+  if (!validProfile(id) || id === 'legacy' || typeof name !== 'string' || !name.trim()) return false;
+  try {
+    const raw = localStorage.getItem(FAMILY_KEY);
+    let names = {}; try { names = JSON.parse(raw || '{}'); } catch {}
+    if (!names || typeof names !== 'object' || Array.isArray(names)) names = {};
+    names[id] = name.trim().slice(0,24);
+    localStorage.setItem(FAMILY_KEY, JSON.stringify(names)); return true;
+  } catch { return false; }
+}
+
+// Only the title profile picker calls this. It reloads the page immediately so
+// no old world, pending dialogue, map cache, or scene can write into a new slot.
+export function selectProfile(id) {
+  if (!validProfile(id)) return false;
+  try { localStorage.getItem(profileSaveKey(id)); localStorage.setItem(ACTIVE_KEY, id); return true; }
+  catch { persistenceIssue = 'unavailable'; return false; }
+}
+
+function backUpLegacy(raw) {
+  if (raw === null) return;
+  if (localStorage.getItem(LEGACY_BACKUP_KEY) === null) {
+    localStorage.setItem(LEGACY_BACKUP_KEY, raw);
+    if (localStorage.getItem(LEGACY_BACKUP_KEY) !== raw) throw new Error('Backup could not be verified');
+  }
+}
+
+export function copyLegacyToProfile(id) {
+  if (!FAMILY_SLOTS.some(p => p.id === id)) return {ok:false, message:'Choose a family profile.'};
+  try {
+    const destination = profileSaveKey(id), original = localStorage.getItem(KEY);
+    if (localStorage.getItem(destination) !== null) return {ok:false, message:'This profile already has a journey. Choose an empty profile.'};
+    if (!readSaved(original)) return {ok:false, message:'The original journey could not be read. It has been kept unchanged.'};
+    backUpLegacy(original);
+    if (localStorage.getItem(KEY) !== original || localStorage.getItem(destination) !== null) return {ok:false, message:'A journey changed in another tab. Try again after closing that tab.'};
+    localStorage.setItem(destination, original);
+    if (localStorage.getItem(destination) !== original) throw new Error('Copy could not be verified');
+    // Do not authorize the old in-memory defaults to overwrite an active-slot
+    // import. The picker must reload before this newly copied journey can write.
+    return {ok:true, message:'Journey copied. The original and its backup are kept unchanged.'};
+  } catch { return {ok:false, message:'Could not safely copy the journey. Your original is unchanged. Check device storage and try again.'}; }
+}
+
+// A confirmed new journey replaces one slot with one write, never delete-then-save.
+export function startNewJourney(start) {
+  const next = defaults(); next.settings = {...S.settings};
+  if (start) Object.assign(next.player, start);
+  if (activeProfile !== 'legacy') next.player.name = profileRows().find(p => p.id === activeProfile)?.name || next.player.name;
+  try {
+    checkWrite(profileSaveKey(), expectedSave);
+    if (activeProfile === 'legacy') backUpLegacy(localStorage.getItem(KEY));
+    const raw = JSON.stringify(next); localStorage.setItem(profileSaveKey(), raw);
+    expectedSave = raw; persistenceIssue = ''; adopt(next); return true;
+  } catch { if (persistenceIssue !== 'conflict') persistenceIssue = 'unavailable'; return false; }
+}
 
 export function defaults() {
   return {
@@ -77,44 +192,53 @@ export function addHearth(n) {
 
 export function save() {
   try {
-    localStorage.setItem(KEY, JSON.stringify(S));
+    checkWrite(profileSaveKey(), expectedSave);
+    const raw = JSON.stringify(S);
+    localStorage.setItem(profileSaveKey(), raw); expectedSave = raw; persistenceIssue = '';
     return true;
-  } catch (err) { console.warn('[save] failed', err); return false; }
+  } catch (err) { if (persistenceIssue !== 'conflict') persistenceIssue = 'unavailable'; console.warn('[save] failed', err); return false; }
 }
 
 export function hasSave() {
-  try { return !!localStorage.getItem(KEY); } catch { return false; }
+  try { return !!readSaved(localStorage.getItem(profileSaveKey())); } catch { return false; }
 }
 
 // Choosing a reading voice on the title must not manufacture a journey save.
 export function savePreferences() {
-  try { localStorage.setItem(PREFERENCES_KEY, JSON.stringify(S.settings)); return true; }
-  catch { return false; }
+  try {
+    checkWrite(preferenceKey(), expectedPreferences);
+    const raw = JSON.stringify(S.settings);
+    localStorage.setItem(preferenceKey(), raw); expectedPreferences = raw;
+    if (expectedSave === null) persistenceIssue = '';
+    return true;
+  }
+  catch { if (persistenceIssue !== 'conflict') persistenceIssue = 'unavailable'; return false; }
 }
 
 export function loadPreferences() {
   try {
-    const raw = localStorage.getItem(PREFERENCES_KEY);
+    const raw = localStorage.getItem(preferenceKey());
     if (!raw) return false;
     const settings = JSON.parse(raw);
     if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return false;
     S.settings = normalizeState({ ...S, settings: { ...defaults().settings, ...settings } }).settings;
+    expectedPreferences = raw;
     return true;
   } catch { return false; }
 }
 
 export function load() {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(profileSaveKey());
     if (!raw) return false;
-    const data = migrate(JSON.parse(raw));
-    S = normalizeState(deepMerge(defaults(), data));
+    const data = readSaved(raw); if (!data) return false;
+    S = data; expectedSave = raw;
     return true;
   } catch (err) { console.warn('[load] failed', err); return false; }
 }
 
 export function resetSave() {
-  try { localStorage.removeItem(KEY); } catch {}
+  try { checkWrite(profileSaveKey(), expectedSave); localStorage.removeItem(profileSaveKey()); expectedSave = null; } catch { return S; }
   S = defaults();
   return S;
 }

@@ -18,6 +18,14 @@ A cozy creature-bonding and village-building RPG. Explore Emberhollow, meet its 
 
 On phones, play in landscape. Translucent controls overlay the playfield edges, move clear of dialogue, and switch to precise arrows in menus. The fullscreen button appears on supported browsers. The title menu supports mouse, touch, keyboard, and controller. Settings include sound, volume, text speed, journey hints, reduced motion, and graphics quality.
 
+## Family profiles
+
+Choose **Family profiles** at the top right of the title screen. Five child profiles and two parent profiles each have their own village, companions, progress, and reading settings. Select a card, optionally save a name, then choose **Play as…**. The game reloads into that profile; Begin and Continue work as before. In a journey, use **Journal → Settings → Save and return to title** before changing people.
+
+Your existing save remains under **Original journey**. An empty profile can explicitly **Copy original journey here**; this first makes a protected backup and keeps the original available. No existing journey is assigned to a child automatically. New journey asks before replacing progress and affects only the selected profile.
+
+These are **local profiles in this browser on this device**, with no login or online play. They do not yet sync across desktop and iPad. Clearing browser site data removes local saves and their local backup. A detected change to the same profile in another tab pauses saving in the older tab. See [family profile scope and verification](FAMILY_RELEASE.md).
+
 ## Sound and reading companion
 
 Choose **Read to me: On** on the title screen for a gentle voice that follows dialogue, important conversations, choices, journey hints, missions, and battle captions. The whole caption appears immediately while reading is enabled. Story pages and decisions wait for you; battle captions wait while the voice is speaking, and A can skip ahead. Use **Listen** to repeat a caption and **Stop** to pause the voice.
@@ -90,6 +98,7 @@ Run `npm run test:illustrated` with the preview server running to check the new
 font, character sheets, and graphics modes at desktop and two mobile sizes.
 Run `npm run test:journey` for the opening playthrough using actual controls and a disposable save.
 Run `npm run test:sound` for reading lifecycle, settings, audio activation, and landscape layout checks.
+Run `npm run test:family` for independent profiles, original-save copying, safe switching, two-tab protection, and touch layouts.
 
 Requires Node.js 20 or newer. The editable source lives in `src/`; **index.html is generated**. No runtime framework or external network request is required.
 
