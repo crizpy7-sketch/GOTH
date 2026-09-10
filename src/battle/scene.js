@@ -546,7 +546,7 @@ function battleScene(params) {
     const sink = reduced ? 0 : collapse * 16;
 
     const sh = Atlas.tryGet('fx.shadow.big');
-    if (sh) R.blit(sh, x, at.y + 54, { alpha: fainted ? 0.15 : 0.42 });
+    if (sh) R.blit(sh, x + 8, at.y + (img?.smooth ? 68 : 54), { alpha: fainted ? 0.15 : 0.42 });
 
     if (!img) { disc(x + 40, y + 55, 16, 19, TYPE_COLOR[g.types[0]] || P.leaf2); return; }
     if (evolving && side === 'player') return;   // the evolution overlay owns the sprite

@@ -1,0 +1,43 @@
+# Illustrated prop production prompts
+
+Built-in image generation, followed by alpha validation and silhouette-based cropping. Optimized files are 64x64 with a 16x16 logical footprint, bottom-center anchor and smooth filtering.
+
+## Indoor atlas — accepted
+
+Use case: stylized-concept. A production sprite atlas of EIGHT separate props for a warm illustrated children's fantasy RPG, Guardians of the Hearth. GENUINELY TRANSPARENT PNG alpha background. A precisely regular FOUR COLUMN by TWO ROW grid, eight equal square cells; each complete object centered at the same ground baseline within its own cell with ample clear padding. Objects must not touch. Elevated three-quarter TOP-DOWN ORTHOGRAPHIC camera, matching a cute brown-haired child adventurer in a green tunic viewed from above. Smooth detailed hand-painted storybook fantasy mobile-game art, sculpted natural materials, warm soft light from upper left, muted forest green shadows and antique-gold highlights. Every object distinct and readable at small game size. TOP ROW left to right: (1) a small square rustic wooden dining table with one ceramic bowl; (2) a single sturdy wooden chair with a woven seat; (3) a short cozy wooden bookcase filled with colorful leatherbound books; (4) a small stone fireplace hearth with a cozy contained orange fire and a compact wooden mantel. BOTTOM ROW left to right: (5) a terracotta pot with a leafy green houseplant; (6) a compact closed wooden treasure chest with brass corners and latch; (7) a plump woven wicker basket; (8) a round wooden wall clock with plain cream face, dark hour marks and two hands. No writing or numerals on the clock. NO room, no landscape, no floor, no ground plane, no platform, no sky, no connecting scenery, no surrounding shadow or colored mist. NO checkerboard or painted transparent-looking background: all pixels between objects must be transparent alpha=0. No text, labels, borders, grids, watermarks or pixel art. Every object wholly visible, including all feet, foliage and handles. These are individual game-ready cutout objects, not a mockup.
+
+Source: `illustrated/props-indoor-source.png`. Output IDs: `table`, `chair`, `bookcase`, `hearth`, `plant`, `chest`, `basket`, `clock`.
+
+## Outdoor atlas — accepted after saved-file validation
+
+Use case: stylized-concept. A production sprite atlas of EIGHT separate props for a warm illustrated children's fantasy RPG, Guardians of the Hearth. GENUINELY TRANSPARENT PNG alpha background. A precisely regular FOUR COLUMN by TWO ROW grid, eight equal square cells; each complete object centered at the same ground baseline within its own cell with ample clear padding. Objects must not touch. Elevated three-quarter TOP-DOWN ORTHOGRAPHIC camera, matching a cute brown-haired child adventurer in a green tunic viewed from above. Smooth detailed hand-painted storybook fantasy mobile-game art, sculpted natural materials, warm soft light from upper left, muted forest green shadows and antique-gold highlights. Every object distinct and readable at small game size. TOP ROW left to right: (1) one rounded leafy flowering bush with cream and pink blossoms; (2) one rounded moss-covered gray rock; (3) one rustic wooden signpost with a blank arrow-shaped sign; (4) one compact wooden lantern post bearing a glowing amber lantern. BOTTOM ROW left to right: (5) one small round stone village well with a simple wooden beam and bucket; (6) one rustic wooden garden bench with two legs; (7) one terracotta flowerpot filled with yellow and pink flowers; (8) one small wooden supply crate. NO room, no landscape, no floor, no ground plane, no platform, no sky, no connecting scenery, no surrounding shadow or colored mist. NO checkerboard or painted transparent-looking background: all pixels between objects must be transparent alpha=0. No text, labels, borders, grids, watermarks or pixel art. Every object wholly visible, including all feet, foliage and handles. These are individual game-ready cutout objects, not a mockup.
+
+The tool preview displayed a colored backdrop, but the saved PNG contains real transparent alpha and eight separate prop silhouettes. All eight extracted cutouts passed numerical alpha checks and visual inspection on a contrasting green background. The saved atlas is the production source; the preview alone was not used as evidence of opacity.
+
+Source: `illustrated/props-outdoor-source.png`. Output IDs: `bush`, `rock`, `sign`, `lantern`, `well`, `bench`, `flowerpot`, `crate`.
+
+## Delivery and validation
+
+Each final asset is `illustrated/prop-{id}.webp`. Both atlases have a `props-{indoor,outdoor}-manifest.json` with source crop bounds and renderer metadata. `scripts/prepare-illustrated-props.mjs` reproduces the cutouts and rejects sources with no useful alpha.
+
+All 16 final cutouts are 64x64 pixels, with alpha minimum 0 and maximum 255; every top and side border pixel is fully transparent. The complete objects retain their natural aspect ratios and rest at bottom-center. Visual evidence is saved in `../artifacts/prop-lineup.png`; per-file validation is in `../artifacts/prop-validation.json`.
+
+## Unused individual retries
+
+Four individual requests were started after the atlas preview appeared opaque, before saved-file alpha verification resolved that concern. They are not used by the game; the two cohesive atlases above supply all 16 production sprites. The original generated files remain in the Codex generated-image directory.
+
+### bush
+
+Production game sprite: ONE rounded leafy flowering bush with dense green leaves and little cream and pink blossoms isolated on a GENUINELY TRANSPARENT PNG alpha background. Complete object with generous clear padding all around. Elevated three-quarter orthographic RPG camera looking down slightly. Smooth richly painted storybook fantasy art, sculpted natural materials, soft warm light from upper left. Entire object visible, clean readable silhouette. NO scenery, NO sky, NO floor or ground plane, NO surrounding atmosphere, NO gradient or colored haze, NO backdrop, NO checkerboard, NO background color, NO glow outside the object, NO text. Every pixel outside the object must be empty alpha=0. One cutout object for a game, not a picture of an object in a scene. No pixel art, no photograph.
+
+### rock
+
+Production game sprite: ONE rounded irregular gray boulder with a soft patch of natural green moss isolated on a GENUINELY TRANSPARENT PNG alpha background. Complete object with generous clear padding all around. Elevated three-quarter orthographic RPG camera looking down slightly. Smooth richly painted storybook fantasy art, sculpted natural materials, soft warm light from upper left. Entire object visible, clean readable silhouette. NO scenery, NO sky, NO floor or ground plane, NO surrounding atmosphere, NO gradient or colored haze, NO backdrop, NO checkerboard, NO background color, NO glow outside the object, NO text. Every pixel outside the object must be empty alpha=0. One cutout object for a game, not a picture of an object in a scene. No pixel art, no photograph.
+
+### sign
+
+Production game sprite: ONE rustic wooden signpost with one small blank arrow-shaped board and a short wooden stake isolated on a GENUINELY TRANSPARENT PNG alpha background. Complete object with generous clear padding all around. Elevated three-quarter orthographic RPG camera looking down slightly. Smooth richly painted storybook fantasy art, sculpted natural materials, soft warm light from upper left. Entire object visible, clean readable silhouette. NO scenery, NO sky, NO floor or ground plane, NO surrounding atmosphere, NO gradient or colored haze, NO backdrop, NO checkerboard, NO background color, NO glow outside the object, NO text. Every pixel outside the object must be empty alpha=0. One cutout object for a game, not a picture of an object in a scene. No pixel art, no photograph.
+
+### lantern
+
+Production game sprite: ONE compact rustic wooden lantern post with one enclosed glowing amber glass lantern hanging from a short wooden arm isolated on a GENUINELY TRANSPARENT PNG alpha background. Complete object with generous clear padding all around. Elevated three-quarter orthographic RPG camera looking down slightly. Smooth richly painted storybook fantasy art, sculpted natural materials, soft warm light from upper left. Entire object visible, clean readable silhouette. NO scenery, NO sky, NO floor or ground plane, NO surrounding atmosphere, NO gradient or colored haze, NO backdrop, NO checkerboard, NO background color, NO glow outside the object, NO text. Every pixel outside the object must be empty alpha=0. One cutout object for a game, not a picture of an object in a scene. No pixel art, no photograph.

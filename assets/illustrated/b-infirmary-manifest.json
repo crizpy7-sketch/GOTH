@@ -1,0 +1,32 @@
+{
+  "id": "infirmary",
+  "tiers": 3,
+  "logicalWidth": 32,
+  "logicalHeight": 64,
+  "pixelRatio": 4,
+  "sharedScale": 0.19776714513556617,
+  "sourceBounds": [
+    {
+      "left": 45,
+      "top": 65,
+      "width": 589,
+      "height": 572,
+      "structuralAlphaPixels": 238213
+    },
+    {
+      "left": 766,
+      "top": 60,
+      "width": 617,
+      "height": 576,
+      "structuralAlphaPixels": 249162
+    },
+    {
+      "left": 1502,
+      "top": 63,
+      "width": 627,
+      "height": 577,
+      "structuralAlphaPixels": 254635
+    }
+  ],
+  "structuralAlphaThreshold": 96
+}

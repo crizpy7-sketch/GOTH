@@ -1,0 +1,114 @@
+{
+  "id": "mayor",
+  "source": "mayor-source.png",
+  "directions": [
+    "down",
+    "up",
+    "left",
+    "right"
+  ],
+  "frames": 4,
+  "frameWidth": 64,
+  "frameHeight": 96,
+  "logicalWidth": 16,
+  "logicalHeight": 24,
+  "sharedScale": 0.32413793103448274,
+  "sourceBounds": [
+    {
+      "left": 61,
+      "top": 13,
+      "width": 183,
+      "height": 279
+    },
+    {
+      "left": 380,
+      "top": 14,
+      "width": 171,
+      "height": 282
+    },
+    {
+      "left": 677,
+      "top": 13,
+      "width": 183,
+      "height": 279
+    },
+    {
+      "left": 996,
+      "top": 13,
+      "width": 165,
+      "height": 287
+    },
+    {
+      "left": 63,
+      "top": 318,
+      "width": 182,
+      "height": 277
+    },
+    {
+      "left": 377,
+      "top": 318,
+      "width": 174,
+      "height": 279
+    },
+    {
+      "left": 681,
+      "top": 318,
+      "width": 181,
+      "height": 278
+    },
+    {
+      "left": 993,
+      "top": 319,
+      "width": 172,
+      "height": 282
+    },
+    {
+      "left": 74,
+      "top": 625,
+      "width": 151,
+      "height": 284
+    },
+    {
+      "left": 379,
+      "top": 628,
+      "width": 155,
+      "height": 280
+    },
+    {
+      "left": 697,
+      "top": 625,
+      "width": 149,
+      "height": 284
+    },
+    {
+      "left": 996,
+      "top": 629,
+      "width": 162,
+      "height": 276
+    },
+    {
+      "left": 67,
+      "top": 935,
+      "width": 157,
+      "height": 289
+    },
+    {
+      "left": 383,
+      "top": 935,
+      "width": 160,
+      "height": 283
+    },
+    {
+      "left": 685,
+      "top": 934,
+      "width": 157,
+      "height": 290
+    },
+    {
+      "left": 1002,
+      "top": 938,
+      "width": 163,
+      "height": 282
+    }
+  ]
+}

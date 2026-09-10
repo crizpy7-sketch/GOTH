@@ -1,0 +1,115 @@
+{
+  "id": "farmer",
+  "source": "farmer-source.png",
+  "directions": [
+    "down",
+    "up",
+    "left",
+    "right"
+  ],
+  "frames": 4,
+  "frameWidth": 64,
+  "frameHeight": 96,
+  "logicalWidth": 16,
+  "logicalHeight": 24,
+  "sharedScale": 0.32867132867132864,
+  "sourceBounds": [
+    {
+      "left": 108,
+      "top": 32,
+      "width": 143,
+      "height": 274
+    },
+    {
+      "left": 402,
+      "top": 32,
+      "width": 147,
+      "height": 283
+    },
+    {
+      "left": 698,
+      "top": 32,
+      "width": 144,
+      "height": 274
+    },
+    {
+      "left": 996,
+      "top": 32,
+      "width": 144,
+      "height": 283
+    },
+    {
+      "left": 105,
+      "top": 336,
+      "width": 145,
+      "height": 279
+    },
+    {
+      "left": 401,
+      "top": 338,
+      "width": 145,
+      "height": 284
+    },
+    {
+      "left": 696,
+      "top": 336,
+      "width": 146,
+      "height": 279
+    },
+    {
+      "left": 995,
+      "top": 336,
+      "width": 143,
+      "height": 286
+    },
+    {
+      "left": 119,
+      "top": 644,
+      "width": 121,
+      "height": 280
+    },
+    {
+      "left": 385,
+      "top": 644,
+      "width": 152,
+      "height": 273
+    },
+    {
+      "left": 709,
+      "top": 644,
+      "width": 122,
+      "height": 279
+    },
+    {
+      "left": 978,
+      "top": 644,
+      "width": 152,
+      "height": 273
+    },
+    {
+      "left": 113,
+      "top": 946,
+      "width": 120,
+      "height": 284
+    },
+    {
+      "left": 397,
+      "top": 943,
+      "width": 143,
+      "height": 277
+    },
+    {
+      "left": 699,
+      "top": 948,
+      "width": 121,
+      "height": 282
+    },
+    {
+      "left": 991,
+      "top": 946,
+      "width": 142,
+      "height": 275
+    }
+  ],
+  "corrections": []
+}

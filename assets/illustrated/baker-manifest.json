@@ -1,0 +1,117 @@
+{
+  "id": "baker",
+  "source": "baker-source.png",
+  "directions": [
+    "down",
+    "up",
+    "left",
+    "right"
+  ],
+  "frames": 4,
+  "frameWidth": 64,
+  "frameHeight": 96,
+  "logicalWidth": 16,
+  "logicalHeight": 24,
+  "sharedScale": 0.3219178082191781,
+  "sourceBounds": [
+    {
+      "left": 107,
+      "top": 12,
+      "width": 139,
+      "height": 283
+    },
+    {
+      "left": 394,
+      "top": 13,
+      "width": 135,
+      "height": 287
+    },
+    {
+      "left": 704,
+      "top": 12,
+      "width": 140,
+      "height": 283
+    },
+    {
+      "left": 992,
+      "top": 12,
+      "width": 136,
+      "height": 288
+    },
+    {
+      "left": 104,
+      "top": 326,
+      "width": 144,
+      "height": 289
+    },
+    {
+      "left": 393,
+      "top": 327,
+      "width": 151,
+      "height": 292
+    },
+    {
+      "left": 701,
+      "top": 325,
+      "width": 145,
+      "height": 290
+    },
+    {
+      "left": 992,
+      "top": 327,
+      "width": 143,
+      "height": 291
+    },
+    {
+      "left": 112,
+      "top": 647,
+      "width": 136,
+      "height": 291
+    },
+    {
+      "left": 403,
+      "top": 648,
+      "width": 149,
+      "height": 284
+    },
+    {
+      "left": 712,
+      "top": 646,
+      "width": 135,
+      "height": 292
+    },
+    {
+      "left": 995,
+      "top": 649,
+      "width": 154,
+      "height": 282
+    },
+    {
+      "left": 110,
+      "top": 967,
+      "width": 133,
+      "height": 291
+    },
+    {
+      "left": 380,
+      "top": 966,
+      "width": 159,
+      "height": 282
+    },
+    {
+      "left": 708,
+      "top": 967,
+      "width": 132,
+      "height": 290
+    },
+    {
+      "left": 973,
+      "top": 965,
+      "width": 163,
+      "height": 284
+    }
+  ],
+  "corrections": [
+    "--swap-sides"
+  ]
+}

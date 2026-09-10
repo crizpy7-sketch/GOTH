@@ -73,6 +73,15 @@ beforeEach(() => {
 
 const companion = (id, opts = {}) => makeGuardian('embercub', 5, { id, ...opts });
 
+test('released direction taps retain their latest facing edge for exactly one frame', () => {
+  key('keydown','ArrowUp');key('keyup','ArrowUp');
+  key('keydown','ArrowLeft');key('keyup','ArrowLeft');
+  assert.equal(Input.dir(),null);
+  assert.equal(Input.tappedDir(),'left');
+  Input.consume('left');assert.equal(Input.tappedDir(),'up');
+  Input.endFrame();assert.equal(Input.tappedDir(),null);
+});
+
 test('a ready Guardian can become the travelling lead in one action without changing anyone else', () => {
   const team = ['one', 'two', 'three'].map(id => companion(id));
   S.party.push(...team);
@@ -315,6 +324,18 @@ test('arrival hints expire while standing still and the journal can recall the r
   assert.ok(!drawn.some(row => row.text === 'Meet Gran Willow'));
 });
 
+test('consuming a buffered tap after keyup cannot swallow the next physical press', () => {
+  key('keydown', 'Enter'); key('keyup', 'Enter');
+  assert.equal(Input.pressed('a'), true);
+  Input.consume('a'); Input.endFrame();
+  key('keydown', 'Enter');
+  assert.equal(Input.pressed('a'), true);
+  assert.equal(Input.held('a'), true);
+  Input.consume('a'); Input.endFrame();
+  assert.equal(Input.held('a'), false, 'holding the consumed gesture cannot reactivate it');
+  key('keyup', 'Enter');
+});
+
 test('settings adjust volume and persist hints and reduced motion without leaving the menu', async () => {
   Scenes.push('settings');
   await press('down');
@@ -328,6 +349,20 @@ test('settings adjust volume and persist hints and reduced motion without leavin
   assert.equal(Scenes.topName, 'settings');
 });
 
+test('graphics quality changes backing resolution without changing logical game coordinates', async () => {
+  const player = { ...S.player };
+  Scenes.push('settings');
+  for (let i = 0; i < 5; i++) await press('down');
+  await press('right');
+  assert.equal(S.settings.graphics, 'high');
+  assert.equal(R.resolution, 4);
+  assert.deepEqual([R.W, R.H], [320, 180]);
+  assert.deepEqual(S.player, player);
+  await press('left');
+  assert.equal(S.settings.graphics, 'balanced');
+  assert.equal(R.resolution, 3);
+});
+
 test('failed save never claims progress is saved or exits to title', async () => {
   localStorage.setItem = () => { throw new Error('storage full'); };
   const warn = console.warn;
@@ -339,7 +374,7 @@ test('failed save never claims progress is saved or exits to title', async () =>
     Scenes.render();
     assert.ok(drawn.some(row => row.text.startsWith('Save failed.')));
     Scenes.push('settings');
-    for (let i = 0; i < 5; i++) await press('down');
+    for (let i = 0; i < 6; i++) await press('down');
     await press('a');
     assert.equal(Scenes.topName, 'settings');
   } finally { console.warn = warn; }

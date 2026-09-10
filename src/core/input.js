@@ -52,6 +52,9 @@ function setDown(btn, source = 'legacy') {
   const alreadyDown = sources.size > 0;
   sources.add(source);
   if (alreadyDown) return;
+  // A new physical gesture is never consumed by the previous one. A buffered
+  // tap can be consumed after its keyup, so clearing only in setUp is too early.
+  consumed.delete(btn);
   down.add(btn); pressed.add(btn); anyPress = true;
   lastInputAt = performance.now();
   if (btn === 'up' || btn === 'down' || btn === 'left' || btn === 'right') {
@@ -85,7 +88,7 @@ export const Input = {
   held(b) { return this.enabled && down.has(b) && !consumed.has(b); },
   pressed(b) { return this.enabled && pressed.has(b) && !consumed.has(b); },
   released(b) { return this.enabled && released.has(b); },
-  consume(b) { consumed.add(b); pressed.delete(b); },
+  consume(b) { if (down.has(b)) consumed.add(b); pressed.delete(b); },
   anyPressed() { return this.enabled && anyPress; },
   get idleMs() { return performance.now() - lastInputAt; },
   get device() { return device; },
@@ -111,6 +114,14 @@ export const Input = {
       if (!consumed.has(dirStack[i])) return dirStack[i];
     }
     return null;
+  },
+
+  // A press/release can occur between logical frames. Keep that gesture for a
+  // facing change, without treating a released key as continued movement.
+  tappedDir() {
+    if (!this.enabled) return null;
+    const directions = [...pressed].filter(b => ['up','down','left','right'].includes(b) && !consumed.has(b));
+    return directions.at(-1) || null;
   },
 
   axis() {

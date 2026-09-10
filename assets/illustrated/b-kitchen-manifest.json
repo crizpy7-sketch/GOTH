@@ -1,0 +1,32 @@
+{
+  "id": "kitchen",
+  "tiers": 3,
+  "logicalWidth": 32,
+  "logicalHeight": 64,
+  "pixelRatio": 4,
+  "sharedScale": 0.315,
+  "sourceBounds": [
+    {
+      "left": 3,
+      "top": 413,
+      "width": 297,
+      "height": 800,
+      "structuralAlphaPixels": 154684
+    },
+    {
+      "left": 297,
+      "top": 416,
+      "width": 289,
+      "height": 794,
+      "structuralAlphaPixels": 153907
+    },
+    {
+      "left": 587,
+      "top": 416,
+      "width": 300,
+      "height": 794,
+      "structuralAlphaPixels": 160440
+    }
+  ],
+  "structuralAlphaThreshold": 96
+}

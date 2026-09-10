@@ -1,0 +1,59 @@
+{
+  "id": "grovewing",
+  "source": "grovewing-source.png",
+  "pixelRatio": 4,
+  "smooth": true,
+  "battle": {
+    "logicalWidth": 80,
+    "logicalHeight": 80,
+    "frameWidth": 320,
+    "frameHeight": 320,
+    "views": [
+      "front",
+      "back"
+    ],
+    "scale": 0.43577235772357725
+  },
+  "overworld": {
+    "logicalWidth": 16,
+    "logicalHeight": 16,
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 2,
+    "scale": 0.09650582362728785
+  },
+  "placements": [
+    {
+      "width": 265,
+      "height": 263,
+      "left": 27,
+      "top": 33
+    },
+    {
+      "width": 268,
+      "height": 268,
+      "left": 26,
+      "top": 28
+    },
+    {
+      "width": 51,
+      "height": 57,
+      "left": 6,
+      "top": 5
+    },
+    {
+      "width": 55,
+      "height": 58,
+      "left": 4,
+      "top": 4
+    }
+  ],
+  "sourceGutters": {
+    "x": 628,
+    "y": [
+      621,
+      623
+    ]
+  },
+  "alphaVerified": true
+}

@@ -38,12 +38,12 @@ try {
     })
   ));
   assert.deepEqual(artSizes,{
-    't.grass':[32,32,16,16],
-    'c.hero.down':[32,48,16,24],
-    'scene.battle':[640,360,320,180],
-    't.tree.oak':[144,192,48,64],
-    'g.aquarabbit.front':[160,160,80,80],
-    'g.aquarabbit.back':[160,160,80,80],
+    't.grass':[64,64,16,16],
+    'c.hero.down':[64,96,16,24],
+    'scene.battle':[1280,720,320,180],
+    't.tree.oak':[192,256,48,64],
+    'g.aquarabbit.front':[320,320,80,80],
+    'g.aquarabbit.back':[320,320,80,80],
   },'detailed assets retain their gameplay footprints');
   assert.deepEqual(await page.locator('#screen').evaluate(c=>[c.width,c.height]),[960,540]);
   await page.locator('#veil').waitFor({state:'hidden'});
@@ -83,7 +83,7 @@ try {
     }
     return {size:[winter.width,winter.height,winter.logicalWidth,winter.logicalHeight],sameAlpha,changed,transparent,visible};
   });
-  assert.deepEqual(winterTree.size,[144,192,48,64]);
+  assert.deepEqual(winterTree.size,[192,256,48,64]);
   assert.equal(winterTree.sameAlpha,true,'season changes preserve canopy transparency');
   assert.ok(winterTree.changed>100 && winterTree.transparent>0 && winterTree.visible>0,'winter recolours foliage on a transparent sprite');
   await page.evaluate(()=>{__game.setClock(10);__game.setSeason('spring');__game.grantStarter('embercub');__game.goto('battle');});

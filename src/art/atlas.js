@@ -187,8 +187,8 @@ export const Atlas = {
 
   // Higher-resolution art keeps its original world footprint. Painters receive
   // physical pixel dimensions; the renderer uses the logical metadata below.
-  defineHD(name, w, h, pixelRatio, painter, frames = 1) {
-    defs.set(name, { w, h, frames, painter, pixelRatio, canvases: null, premium: true });
+  defineHD(name, w, h, pixelRatio, painter, frames = 1, opts = {}) {
+    defs.set(name, { w, h, frames, painter, pixelRatio, smooth: !!opts.smooth, canvases: null, premium: true });
   },
 
   defineSheet(name, w, h, frames, src, opts = {}) {
@@ -202,7 +202,7 @@ export const Atlas = {
     });
     image.src = src;
     const def = { w, h, frames, image, frameW: opts.frameW || w, frameH: opts.frameH || h,
-      canvases: null, pixelRatio: opts.pixelRatio || 1, premium: !!opts.premium, fallback };
+      canvases: null, pixelRatio: opts.pixelRatio || 1, smooth: !!opts.smooth, flipX: !!opts.flipX, premium: !!opts.premium, fallback };
     sheetLoads.push({ name, load, def });
     defs.set(name, def);
   },
@@ -245,13 +245,17 @@ export const Atlas = {
       const ratio = d.pixelRatio || 1;
       const c = makeCanvas(d.w * ratio, d.h * ratio);
       c.logicalWidth = d.w; c.logicalHeight = d.h; c.pixelRatio = ratio;
+      c.smooth = !!d.smooth;
       const ctx = c.getContext('2d');
-      ctx.imageSmoothingEnabled = false;
+      ctx.imageSmoothingEnabled = !!d.smooth;
       try {
         if (d.image) {
+          ctx.save();
+          if (d.flipX) { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
           const sx = (f * d.frameW) % d.image.width;
           const sy = Math.floor((f * d.frameW) / d.image.width) * d.frameH;
           ctx.drawImage(d.image, sx, sy, d.frameW, d.frameH, 0, 0, c.width, c.height);
+          ctx.restore();
         } else d.painter(ctx, c.width, c.height, f);
       } catch (err) { console.error(`[atlas] source "${name}" frame ${f} failed`, err); }
       raw.push(c);
@@ -299,7 +303,7 @@ export const Atlas = {
         d[i] = out[0]; d[i + 1] = out[1]; d[i + 2] = out[2]; d[i + 3] = out[3];
       }
       ctx.putImageData(img, 0, 0);
-    }, src.frames);
+    }, src.frames, {smooth: src.smooth});
     return key;
   },
 
@@ -313,7 +317,7 @@ export const Atlas = {
       ctx.globalCompositeOperation = 'source-in';
       ctx.fillStyle = color;
       ctx.fillRect(0, 0, w, h);
-    }, src.frames);
+    }, src.frames, {smooth: src.smooth});
     return key;
   },
 

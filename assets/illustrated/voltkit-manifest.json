@@ -1,0 +1,59 @@
+{
+  "id": "voltkit",
+  "source": "voltkit-source.png",
+  "pixelRatio": 4,
+  "smooth": true,
+  "battle": {
+    "logicalWidth": 80,
+    "logicalHeight": 80,
+    "frameWidth": 320,
+    "frameHeight": 320,
+    "views": [
+      "front",
+      "back"
+    ],
+    "scale": 0.40341880341880343
+  },
+  "overworld": {
+    "logicalWidth": 16,
+    "logicalHeight": 16,
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 2,
+    "scale": 0.1
+  },
+  "placements": [
+    {
+      "width": 227,
+      "height": 236,
+      "left": 46,
+      "top": 60
+    },
+    {
+      "width": 219,
+      "height": 236,
+      "left": 50,
+      "top": 60
+    },
+    {
+      "width": 44,
+      "height": 56,
+      "left": 10,
+      "top": 6
+    },
+    {
+      "width": 47,
+      "height": 58,
+      "left": 8,
+      "top": 4
+    }
+  ],
+  "sourceGutters": {
+    "x": 627,
+    "y": [
+      627,
+      627
+    ]
+  },
+  "alphaVerified": true
+}

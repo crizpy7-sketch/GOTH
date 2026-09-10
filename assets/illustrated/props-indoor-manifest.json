@@ -1,0 +1,142 @@
+{
+  "group": "indoor",
+  "source": "props-indoor-source.png",
+  "props": [
+    {
+      "id": "table",
+      "file": "prop-table.webp",
+      "sourceBounds": {
+        "left": 34,
+        "top": 45,
+        "width": 403,
+        "height": 395
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "chair",
+      "file": "prop-chair.webp",
+      "sourceBounds": {
+        "left": 535,
+        "top": 7,
+        "width": 278,
+        "height": 434
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "bookcase",
+      "file": "prop-bookcase.webp",
+      "sourceBounds": {
+        "left": 913,
+        "top": 18,
+        "width": 389,
+        "height": 420
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "hearth",
+      "file": "prop-hearth.webp",
+      "sourceBounds": {
+        "left": 1363,
+        "top": 11,
+        "width": 380,
+        "height": 434
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "plant",
+      "file": "prop-plant.webp",
+      "sourceBounds": {
+        "left": 57,
+        "top": 457,
+        "width": 348,
+        "height": 377
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "chest",
+      "file": "prop-chest.webp",
+      "sourceBounds": {
+        "left": 483,
+        "top": 497,
+        "width": 373,
+        "height": 349
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "basket",
+      "file": "prop-basket.webp",
+      "sourceBounds": {
+        "left": 944,
+        "top": 506,
+        "width": 367,
+        "height": 323
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    },
+    {
+      "id": "clock",
+      "file": "prop-clock.webp",
+      "sourceBounds": {
+        "left": 1389,
+        "top": 477,
+        "width": 327,
+        "height": 356
+      },
+      "width": 64,
+      "height": 64,
+      "logicalWidth": 16,
+      "logicalHeight": 16,
+      "pixelRatio": 4,
+      "smooth": true,
+      "alphaVerified": true
+    }
+  ]
+}

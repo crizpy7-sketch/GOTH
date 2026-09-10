@@ -1,0 +1,32 @@
+{
+  "id": "cottage",
+  "tiers": 3,
+  "logicalWidth": 32,
+  "logicalHeight": 64,
+  "pixelRatio": 4,
+  "sharedScale": 0.2164048865619546,
+  "sourceBounds": [
+    {
+      "left": 27,
+      "top": 98,
+      "width": 567,
+      "height": 708,
+      "structuralAlphaPixels": 287758
+    },
+    {
+      "left": 601,
+      "top": 94,
+      "width": 566,
+      "height": 714,
+      "structuralAlphaPixels": 296186
+    },
+    {
+      "left": 1173,
+      "top": 35,
+      "width": 573,
+      "height": 781,
+      "structuralAlphaPixels": 308204
+    }
+  ],
+  "structuralAlphaThreshold": 96
+}

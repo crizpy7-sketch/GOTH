@@ -69,10 +69,7 @@ export function journeyGoal(map) {
 // A quiet glass plaque keeps the scenery visible. The heavier framed windows
 // belong to dialogue and menus, where reading is the main activity.
 function plaque(x, y, w, h, alpha = 0.82) {
-  R.rect(x + 1, y + 1, w, h, 'rgba(8,19,19,0.25)');
-  R.rect(x, y, w, h, `rgba(17,34,30,${alpha})`);
-  R.stroke(x, y, w, h, '#71816a');
-  R.rect(x + 1, y + 1, w - 2, 1, 'rgba(244,219,157,0.12)');
+  Frame.panel(x, y, w, h, {style:'hud',alpha,shadow:false});
 }
 
 function drawJourney(map, goal) {

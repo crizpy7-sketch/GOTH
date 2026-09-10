@@ -1,0 +1,59 @@
+{
+  "id": "wisplet",
+  "source": "wisplet-source.png",
+  "pixelRatio": 4,
+  "smooth": true,
+  "battle": {
+    "logicalWidth": 80,
+    "logicalHeight": 80,
+    "frameWidth": 320,
+    "frameHeight": 320,
+    "views": [
+      "front",
+      "back"
+    ],
+    "scale": 0.3624161073825503
+  },
+  "overworld": {
+    "logicalWidth": 16,
+    "logicalHeight": 16,
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 2,
+    "scale": 0.10526315789473684
+  },
+  "placements": [
+    {
+      "width": 180,
+      "height": 216,
+      "left": 70,
+      "top": 64
+    },
+    {
+      "width": 163,
+      "height": 205,
+      "left": 78,
+      "top": 75
+    },
+    {
+      "width": 50,
+      "height": 58,
+      "left": 7,
+      "top": 4
+    },
+    {
+      "width": 49,
+      "height": 58,
+      "left": 7,
+      "top": 4
+    }
+  ],
+  "sourceGutters": {
+    "x": 627,
+    "y": [
+      627,
+      627
+    ]
+  },
+  "alphaVerified": true
+}

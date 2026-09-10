@@ -15,7 +15,13 @@ A cozy creature-bonding and village-building RPG. Explore Emberhollow, meet its 
 | Journal | M | Menu | Menu |
 | Village shortcut | C | View | Journal → Village |
 
-On phones, play in landscape. Translucent controls overlay the playfield edges, move clear of dialogue, and switch to precise arrows in menus. The fullscreen button appears on supported browsers. The title menu supports mouse, touch, keyboard, and controller. Settings include sound, volume, text speed, journey hints, and reduced motion.
+On phones, play in landscape. Translucent controls overlay the playfield edges, move clear of dialogue, and switch to precise arrows in menus. The fullscreen button appears on supported browsers. The title menu supports mouse, touch, keyboard, and controller. Settings include sound, volume, text speed, journey hints, reduced motion, and graphics quality.
+
+## Illustrated opening
+
+Start a new journey and follow the hint to Gran Willow's Warmhouse. Choose a Guardian, meet the Mayor, then explore the meadow and forest. Try a battle and a Bond offer, track a family mission, and use your rewards to build and upgrade Emberhollow. **Continue journey** keeps existing progress.
+
+The opening now has smooth illustrated characters, all nine opening creatures, painted trees and building upgrades, expressive story portraits, readable typography, and revised mobile menus. Balanced graphics is the default; High detail is available in Settings. [Release scope and verification](ILLUSTRATED_RELEASE.md) records the exact coverage and device-testing limits.
 
 ## Important conversations v4
 
@@ -63,6 +69,15 @@ generation prompts are documented in [assets/ARTWORK.md](assets/ARTWORK.md).
 - Dialogue reveals the current page on the first confirm tap and advances on the next.
 
 ## Develop
+
+See [release scope and evidence](ILLUSTRATED_RELEASE.md) and
+[production art prompts](assets/ILLUSTRATED_PROMPTS.md). Balanced graphics defaults
+to a 960×540 render surface; Settings also offers High detail at 1280×720.
+Both modes use the same art, smooth embedded typography, and gameplay coordinates.
+The new asset preparation helpers require Sharp; normal builds use committed art.
+Run `npm run test:illustrated` with the preview server running to check the new
+font, character sheets, and graphics modes at desktop and two mobile sizes.
+Run `npm run test:journey` for the opening playthrough using actual controls and a disposable save.
 
 Requires Node.js 20 or newer. The editable source lives in `src/`; **index.html is generated**. No runtime framework or external network request is required.
 

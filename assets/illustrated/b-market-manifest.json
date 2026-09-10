@@ -1,0 +1,32 @@
+{
+  "id": "market",
+  "tiers": 3,
+  "logicalWidth": 48,
+  "logicalHeight": 32,
+  "pixelRatio": 4,
+  "sharedScale": 0.17714285714285713,
+  "sourceBounds": [
+    {
+      "left": 38,
+      "top": 47,
+      "width": 615,
+      "height": 680,
+      "structuralAlphaPixels": 261054
+    },
+    {
+      "left": 694,
+      "top": 47,
+      "width": 618,
+      "height": 680,
+      "structuralAlphaPixels": 295524
+    },
+    {
+      "left": 1363,
+      "top": 27,
+      "width": 622,
+      "height": 700,
+      "structuralAlphaPixels": 318020
+    }
+  ],
+  "structuralAlphaThreshold": 96
+}

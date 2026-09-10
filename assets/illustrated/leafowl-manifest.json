@@ -1,0 +1,59 @@
+{
+  "id": "leafowl",
+  "source": "leafowl-source.png",
+  "pixelRatio": 4,
+  "smooth": true,
+  "battle": {
+    "logicalWidth": 80,
+    "logicalHeight": 80,
+    "frameWidth": 320,
+    "frameHeight": 320,
+    "views": [
+      "front",
+      "back"
+    ],
+    "scale": 0.3793677204658902
+  },
+  "overworld": {
+    "logicalWidth": 16,
+    "logicalHeight": 16,
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 2,
+    "scale": 0.10320284697508897
+  },
+  "placements": [
+    {
+      "width": 198,
+      "height": 228,
+      "left": 61,
+      "top": 68
+    },
+    {
+      "width": 165,
+      "height": 227,
+      "left": 77,
+      "top": 69
+    },
+    {
+      "width": 40,
+      "height": 57,
+      "left": 12,
+      "top": 5
+    },
+    {
+      "width": 43,
+      "height": 58,
+      "left": 10,
+      "top": 4
+    }
+  ],
+  "sourceGutters": {
+    "x": 627,
+    "y": [
+      628,
+      627
+    ]
+  },
+  "alphaVerified": true
+}

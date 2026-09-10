@@ -29,7 +29,7 @@
   }
   body {
     position:fixed; inset:0;
-    font-family:ui-monospace,"SF Mono",Menlo,monospace;
+    font-family:HearthText,system-ui,sans-serif;
     touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
   }
   #gameViewport {
@@ -61,7 +61,7 @@
   }
   #screen {
     display:block; width:320px; height:180px;
-    image-rendering:pixelated; image-rendering:crisp-edges;
+    image-rendering:auto;
     background:#0b0e14; box-shadow:inset 0 0 20px rgba(0,0,0,.45);
   }
   #stage::before,#stage::after {
@@ -255,7 +255,7 @@
   /* The title uses illustration at display resolution; exploration remains crisp pixel art. */
   #titleScreen { position:absolute; inset:9px; z-index:3; overflow:hidden; color:#fff3d7;
     background:#16382f url('__TITLE_ART__') center/cover no-repeat;
-    font-family:system-ui,-apple-system,sans-serif; container-type:size; }
+    font-family:HearthText,system-ui,-apple-system,sans-serif; container-type:size; }
   #titleScreen[hidden] { display:none; }
   #titleScreen::before { content:''; position:absolute; inset:0;
     background:linear-gradient(90deg,rgba(5,24,25,.83),rgba(8,27,27,.48) 35%,transparent 65%),linear-gradient(0deg,rgba(6,27,28,.55),transparent 25%); }

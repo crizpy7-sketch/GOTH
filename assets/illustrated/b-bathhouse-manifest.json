@@ -1,0 +1,25 @@
+{
+  "id": "bathhouse",
+  "tiers": 2,
+  "logicalWidth": 48,
+  "logicalHeight": 64,
+  "pixelRatio": 4,
+  "sharedScale": 0.2222222222222222,
+  "sourceBounds": [
+    {
+      "left": 78,
+      "top": 58,
+      "width": 804,
+      "height": 673,
+      "structuralAlphaPixels": 387961
+    },
+    {
+      "left": 1035,
+      "top": 52,
+      "width": 846,
+      "height": 695,
+      "structuralAlphaPixels": 445289
+    }
+  ],
+  "structuralAlphaThreshold": 96
+}

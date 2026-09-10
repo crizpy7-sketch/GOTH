@@ -47,7 +47,7 @@ export function defaults() {
     clock: { day: 1, hour: 8, minute: 0, season: 'spring', weather: 'clear' },
 
     flags: {},
-    settings: { volume: 0.7, muted: false, textSpeed: 2, showGrid: false, showHints: true, reducedMotion: false },
+    settings: { volume: 0.7, muted: false, textSpeed: 2, showGrid: false, showHints: true, reducedMotion: false, graphics: 'balanced' },
 
     stats: { steps: 0, battles: 0, wins: 0, bonded: 0, built: 0, missionsDone: 0 },
   };
@@ -193,6 +193,7 @@ export function normalizeState(state) {
   state.settings.showGrid = !!state.settings.showGrid;
   state.settings.showHints = state.settings.showHints !== false;
   state.settings.reducedMotion = !!state.settings.reducedMotion;
+  state.settings.graphics = state.settings.graphics === 'high' ? 'high' : 'balanced';
   state.stats = normalizeNumberMap(state.stats, base.stats);
   return state;
 }

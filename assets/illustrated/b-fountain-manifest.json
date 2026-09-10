@@ -1,0 +1,25 @@
+{
+  "id": "fountain",
+  "tiers": 2,
+  "logicalWidth": 32,
+  "logicalHeight": 32,
+  "pixelRatio": 4,
+  "sharedScale": 0.16020671834625322,
+  "sourceBounds": [
+    {
+      "left": 86,
+      "top": 120,
+      "width": 733,
+      "height": 656,
+      "structuralAlphaPixels": 353915
+    },
+    {
+      "left": 946,
+      "top": 119,
+      "width": 774,
+      "height": 664,
+      "structuralAlphaPixels": 362675
+    }
+  ],
+  "structuralAlphaThreshold": 96
+}

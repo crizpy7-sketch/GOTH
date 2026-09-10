@@ -1,0 +1,59 @@
+{
+  "id": "drakindle",
+  "source": "drakindle-source.png",
+  "pixelRatio": 4,
+  "smooth": true,
+  "battle": {
+    "logicalWidth": 80,
+    "logicalHeight": 80,
+    "frameWidth": 320,
+    "frameHeight": 320,
+    "views": [
+      "front",
+      "back"
+    ],
+    "scale": 0.4553415061295972
+  },
+  "overworld": {
+    "logicalWidth": 16,
+    "logicalHeight": 16,
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 2,
+    "scale": 0.10175438596491228
+  },
+  "placements": [
+    {
+      "width": 254,
+      "height": 260,
+      "left": 33,
+      "top": 36
+    },
+    {
+      "width": 250,
+      "height": 250,
+      "left": 35,
+      "top": 46
+    },
+    {
+      "width": 52,
+      "height": 57,
+      "left": 6,
+      "top": 5
+    },
+    {
+      "width": 49,
+      "height": 58,
+      "left": 7,
+      "top": 4
+    }
+  ],
+  "sourceGutters": {
+    "x": 627,
+    "y": [
+      627,
+      627
+    ]
+  },
+  "alphaVerified": true
+}

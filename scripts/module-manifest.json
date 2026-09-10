@@ -1,5 +1,8 @@
 [
-  { "id": "ui/story.js", "deps": {} },
+  {
+    "id": "ui/story.js",
+    "deps": {}
+  },
   {
     "id": "ui/menu.js",
     "deps": {}
@@ -478,5 +481,13 @@
       "./dev/minimal-ui.js": "dev/minimal-ui.js",
       "./dev/fallback.js": "dev/fallback.js"
     }
+  },
+  {
+    "id": "art/illustrated-world.js",
+    "deps": {}
+  },
+  {
+    "id": "art/illustrated-ui.js",
+    "deps": {}
   }
 ]

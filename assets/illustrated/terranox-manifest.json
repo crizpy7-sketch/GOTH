@@ -1,0 +1,59 @@
+{
+  "id": "terranox",
+  "source": "terranox-source.png",
+  "pixelRatio": 4,
+  "smooth": true,
+  "battle": {
+    "logicalWidth": 80,
+    "logicalHeight": 80,
+    "frameWidth": 320,
+    "frameHeight": 320,
+    "views": [
+      "front",
+      "back"
+    ],
+    "scale": 0.45849802371541504
+  },
+  "overworld": {
+    "logicalWidth": 16,
+    "logicalHeight": 16,
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 2,
+    "scale": 0.10984848484848485
+  },
+  "placements": [
+    {
+      "width": 274,
+      "height": 232,
+      "left": 23,
+      "top": 64
+    },
+    {
+      "width": 257,
+      "height": 230,
+      "left": 31,
+      "top": 66
+    },
+    {
+      "width": 54,
+      "height": 57,
+      "left": 5,
+      "top": 5
+    },
+    {
+      "width": 53,
+      "height": 58,
+      "left": 5,
+      "top": 4
+    }
+  ],
+  "sourceGutters": {
+    "x": 627,
+    "y": [
+      627,
+      627
+    ]
+  },
+  "alphaVerified": true
+}

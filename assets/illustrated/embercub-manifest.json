@@ -1,0 +1,59 @@
+{
+  "id": "embercub",
+  "source": "embercub-source.png",
+  "pixelRatio": 4,
+  "smooth": true,
+  "battle": {
+    "logicalWidth": 80,
+    "logicalHeight": 80,
+    "frameWidth": 320,
+    "frameHeight": 320,
+    "views": [
+      "front",
+      "back"
+    ],
+    "scale": 0.39869281045751637
+  },
+  "overworld": {
+    "logicalWidth": 16,
+    "logicalHeight": 16,
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 2,
+    "scale": 0.09830508474576272
+  },
+  "placements": [
+    {
+      "width": 218,
+      "height": 244,
+      "left": 51,
+      "top": 52
+    },
+    {
+      "width": 205,
+      "height": 240,
+      "left": 57,
+      "top": 56
+    },
+    {
+      "width": 38,
+      "height": 57,
+      "left": 13,
+      "top": 5
+    },
+    {
+      "width": 40,
+      "height": 58,
+      "left": 12,
+      "top": 4
+    }
+  ],
+  "sourceGutters": {
+    "x": 627,
+    "y": [
+      629,
+      627
+    ]
+  },
+  "alphaVerified": true
+}

@@ -24,6 +24,7 @@ let flashFrames = 0, flashTotal = 0, flashColor = '#fff';
 let cinematicFx = true;
 const silhouettes = new WeakMap();
 let atmosphere = null;
+let worldSurface = null, worldContext = null;
 
 function atmosphereLayer() {
   if (atmosphere) return atmosphere;
@@ -176,6 +177,16 @@ export const R = {
     };
   },
 
+  setQuality(quality = 'balanced') {
+    const next = quality === 'balanced' ? 3 : 4;
+    if (this.resolution === next) return;
+    this.resolution = next;
+    if (canvas) {
+      canvas.width = this.W * next; canvas.height = this.H * next;
+      ctx.imageSmoothingEnabled = false;
+    }
+  },
+
   // ---- frame lifecycle (main.js owns these) ----
   begin() {
     this.worldZoom = 1;
@@ -190,7 +201,22 @@ export const R = {
   },
 
   flush() {
-    ctx.setTransform(this.resolution, 0, 0, this.resolution, 0, 0);
+    // Large outdoor views contain hundreds of overlapping tiles. Render that
+    // moving layer at 960x540, then composite under the native 1280x720 UI.
+    // Close-up story/battle scenes retain the full-resolution surface.
+    const displayContext = ctx;
+    const splitWorld = this.resolution > 3 && this.worldZoom < 1;
+    if (splitWorld) {
+      if (!worldSurface) {
+        worldSurface = document.createElement('canvas');
+        worldSurface.width = this.W * 3; worldSurface.height = this.H * 3;
+        worldContext = worldSurface.getContext('2d');
+      }
+      ctx = worldContext;
+    }
+    const ratio = splitWorld ? 3 : this.resolution;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    if (splitWorld) ctx.clearRect(0, 0, this.W, this.H);
     ctx.save();
     if (shakeX || shakeY) ctx.translate(shakeX, shakeY);
     ctx.scale(this.worldZoom, this.worldZoom);
@@ -203,6 +229,13 @@ export const R = {
       for (let k = 0; k < l.length; k++) l[k](ctx);
     }
     ctx.restore();
+    if (splitWorld) {
+      ctx = displayContext;
+      ctx.setTransform(this.resolution, 0, 0, this.resolution, 0, 0);
+      ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
+      ctx.drawImage(worldSurface, 0, 0, this.W, this.H);
+      ctx.restore();
+    }
     if (flashFrames > 0) {
       ctx.globalAlpha = clamp(flashFrames / flashTotal, 0, 1);
       ctx.fillStyle = flashColor;
@@ -234,6 +267,12 @@ export const R = {
 
   blit(img, x, y, o) {
     if (!img) return;
+    const smoothing = ctx.imageSmoothingEnabled;
+    try {
+    ctx.imageSmoothingEnabled = !!img.smooth;
+    // Source art is already resampled offline. Bilinear filtering keeps moving
+    // sprites smooth without a costly high-quality resample on every blit.
+    if (img.smooth) ctx.imageSmoothingQuality = 'low';
     const dx = Math.round(x), dy = Math.round(y);
     const iw = img.logicalWidth || img.width, ih = img.logicalHeight || img.height;
     const ratio = img.pixelRatio || 1;
@@ -256,6 +295,7 @@ export const R = {
       ctx.drawImage(img, dx, dy, iw, ih);
     }
     if (a !== undefined && a < 1) ctx.globalAlpha = 1;
+    } finally { ctx.imageSmoothingEnabled = smoothing; }
   },
 
   // Silhouette blit: draws `img` as a flat colour. Used for hit flashes and shadows.

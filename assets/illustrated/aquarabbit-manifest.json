@@ -1,0 +1,59 @@
+{
+  "id": "aquarabbit",
+  "source": "aquarabbit-source.png",
+  "pixelRatio": 4,
+  "smooth": true,
+  "battle": {
+    "logicalWidth": 80,
+    "logicalHeight": 80,
+    "frameWidth": 320,
+    "frameHeight": 320,
+    "views": [
+      "front",
+      "back"
+    ],
+    "scale": 0.4090909090909091
+  },
+  "overworld": {
+    "logicalWidth": 16,
+    "logicalHeight": 16,
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 2,
+    "scale": 0.09682804674457429
+  },
+  "placements": [
+    {
+      "width": 153,
+      "height": 252,
+      "left": 83,
+      "top": 44
+    },
+    {
+      "width": 162,
+      "height": 252,
+      "left": 79,
+      "top": 44
+    },
+    {
+      "width": 26,
+      "height": 57,
+      "left": 19,
+      "top": 5
+    },
+    {
+      "width": 27,
+      "height": 58,
+      "left": 18,
+      "top": 4
+    }
+  ],
+  "sourceGutters": {
+    "x": 627,
+    "y": [
+      627,
+      627
+    ]
+  },
+  "alphaVerified": true
+}
